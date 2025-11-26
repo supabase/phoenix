@@ -117,6 +117,7 @@ export default class Socket {
     this.sendBuffer = []
     this.ref = 0
     this.fallbackRef = null
+    /** @type{number} */
     this.timeout = opts.timeout || DEFAULT_TIMEOUT
     this.transport = opts.transport || global.WebSocket || LongPoll
     this.primaryPassedHealthCheck = false

@@ -1,39 +1,56 @@
 /**
- *
- * @param {string} topic
- * @param {(Object|function)} params
- * @param {Socket} socket
- */
+* @typedef {Record<string, unknown>} Params
+* @typedef {(import("./socket.js").default} Socket
+* @typedef {(payload: unknown, ref: number, joinRef: number) => void} BindingCallback
+* @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
+*/
 export default class Channel {
-    constructor(topic: any, params: any, socket: any);
-    state: "closed";
-    topic: any;
-    params: () => any;
-    socket: any;
-    bindings: any[];
+    /**
+     * @param {string} topic
+     * @param {Params | (() => Params)} params
+     * @param {Socket} socket
+     */
+    constructor(topic: string, params: Params | (() => Params), socket: Socket);
+    /** @type{(import("./constants.js").ChannelState} */
+    state: (import("./constants.js").ChannelState);
+    /** @type{string} */
+    topic: string;
+    /** @type{string} */
+    params: string;
+    /** @type {Socket} */
+    socket: Socket;
+    /** @type{Binding[]} */
+    bindings: Binding[];
+    /** @type{number} */
     bindingRef: number;
-    timeout: any;
+    /** @type{number} */
+    timeout: number;
+    /** @type{boolean} */
     joinedOnce: boolean;
+    /** @type{Push} */
     joinPush: Push;
-    pushBuffer: any[];
-    stateChangeRefs: any[];
+    /** @type{Push[]} */
+    pushBuffer: Push[];
+    /** @type{string[]} */
+    stateChangeRefs: string[];
+    /** @type{Timer} */
     rejoinTimer: Timer;
     /**
      * Join the channel
-     * @param {integer} timeout
+     * @param {number} timeout
      * @returns {Push}
      */
-    join(timeout?: integer): Push;
+    join(timeout?: number): Push;
     /**
      * Hook into channel close
-     * @param {Function} callback
+     * @param {BindingCallback} callback
      */
-    onClose(callback: Function): void;
+    onClose(callback: BindingCallback): void;
     /**
      * Hook into channel errors
-     * @param {Function} callback
+     * @param {(reason: unknown) => void} callback
      */
-    onError(callback: Function): integer;
+    onError(callback: (reason: unknown) => void): number;
     /**
      * Subscribes on channel events
      *
@@ -48,10 +65,10 @@ export default class Channel {
      * // while do_other_stuff will keep firing on the "event"
      *
      * @param {string} event
-     * @param {Function} callback
-     * @returns {integer} ref
+     * @param {BindingCallback} callback
+     * @returns {number} ref
      */
-    on(event: string, callback: Function): integer;
+    on(event: string, callback: BindingCallback): number;
     /**
      * Unsubscribes off of channel events
      *
@@ -68,9 +85,9 @@ export default class Channel {
      * channel.off("event")
      *
      * @param {string} event
-     * @param {integer} ref
+     * @param {number} ref
      */
-    off(event: string, ref: integer): void;
+    off(event: string, ref: number): void;
     /**
      * @private
      */
@@ -105,11 +122,12 @@ export default class Channel {
      * @example
      * channel.leave().receive("ok", () => alert("left!") )
      *
-     * @param {integer} timeout
+     * @param {number} timeout
      * @returns {Push}
      */
-    leave(timeout?: integer): Push;
+    leave(timeout?: number): Push;
     /**
+     * @abstract
      * Overridable message hook
      *
      * Receives all events for specialized message handling
@@ -117,11 +135,11 @@ export default class Channel {
      *
      * Must return the payload, modified or unmodified
      * @param {string} event
-     * @param {Object} payload
-     * @param {integer} ref
-     * @returns {Object}
+     * @param {unknown} payload
+     * @param {number} ref
+     * @returns {unknown}
      */
-    onMessage(_event: any, payload: Object, _ref: any): Object;
+    onMessage(event: string, payload: unknown, ref: number): unknown;
     /**
      * @private
      */
@@ -163,6 +181,14 @@ export default class Channel {
      */
     private isLeaving;
 }
+export type Params = Record<string, unknown>;
+export type Socket = (import("./socket.js").default);
+export type BindingCallback = (payload: unknown, ref: number, joinRef: number) => void;
+export type Binding = ({
+    event: string;
+    ref: number;
+    callback: BindingCallback;
+});
 import Push from "./push";
 import Timer from "./timer";
 //# sourceMappingURL=channel.d.ts.map

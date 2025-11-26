@@ -100,7 +100,8 @@ export default class Socket {
     sendBuffer: any[];
     ref: number;
     fallbackRef: string | null;
-    timeout: any;
+    /** @type{number} */
+    timeout: number;
     transport: any;
     primaryPassedHealthCheck: boolean;
     longPollFallbackMs: any;
