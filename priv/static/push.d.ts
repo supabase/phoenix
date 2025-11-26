@@ -1,20 +1,32 @@
 /**
- * Initializes the Push
- * @param {Channel} channel - The Channel
- * @param {string} event - The event, for example `"phx_join"`
- * @param {Object} payload - The payload, for example `{user_id: 123}`
- * @param {number} timeout - The push timeout in milliseconds
+ * @typedef {import("./channel").default} Channel
+ * @typedef {import("./constants").ChannelEvent} ChannelEvent
  */
 export default class Push {
-    constructor(channel: any, event: any, payload: any, timeout: any);
-    channel: any;
-    event: any;
-    payload: any;
-    receivedResp: any;
-    timeout: any;
-    timeoutTimer: NodeJS.Timeout | null;
+    /**
+     * Initializes the Push
+     * @param {Channel} channel - The Channel
+     * @param {ChannelEvent} event - The event, for example `"phx_join"`
+     * @param {() => Record<string, unknown>} payload - The payload, for example `{user_id: 123}`
+     * @param {number} timeout - The push timeout in milliseconds
+     */
+    constructor(channel: Channel, event: ChannelEvent, payload: () => Record<string, unknown>, timeout: number);
+    /** @type{Channel} */
+    channel: Channel;
+    /** @type{ChannelEvent} */
+    event: ChannelEvent;
+    /** @type{() => Record<string, unknown>} */
+    payload: () => Record<string, unknown>;
+    receivedResp: unknown;
+    /** @type{number} */
+    timeout: number;
+    /** @type{(ReturnType<typeof setTimeout>) | null} */
+    timeoutTimer: (ReturnType<typeof setTimeout>) | null;
     recHooks: any[];
+    /** @type{boolean} */
     sent: boolean;
+    /** @type{number} */
+    ref: number;
     /**
      *
      * @param {number} timeout
@@ -26,16 +38,15 @@ export default class Push {
     send(): void;
     /**
      *
-     * @param {*} status
-     * @param {*} callback
+     * @param {string} status
+     * @param {(response: any) => void} callback
      */
-    receive(status: any, callback: any): this;
+    receive(status: string, callback: (response: any) => void): this;
     /**
      * @private
      */
     private reset;
-    ref: any;
-    refEvent: any;
+    refEvent: string | null | undefined;
     /**
      * @private
      */
@@ -61,4 +72,6 @@ export default class Push {
      */
     private trigger;
 }
+export type Channel = import("./channel").default;
+export type ChannelEvent = import("./constants").ChannelEvent;
 //# sourceMappingURL=push.d.ts.map
