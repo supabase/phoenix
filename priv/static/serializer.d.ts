@@ -19,7 +19,7 @@ declare namespace _default {
         join_ref: any;
         ref: any;
         topic: any;
-        event: string;
+        event: "phx_reply";
         payload: {
             status: any;
             response: any;
@@ -36,7 +36,7 @@ declare namespace _default {
         join_ref: any;
         ref: any;
         topic: any;
-        event: string;
+        event: "phx_reply";
         payload: {
             status: any;
             response: any;

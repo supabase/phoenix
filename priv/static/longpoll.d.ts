@@ -14,7 +14,7 @@ export default class LongPoll {
     onmessage: () => void;
     onclose: () => void;
     pollEndpoint: any;
-    readyState: number;
+    readyState: 0;
     normalizeEndpoint(endPoint: any): any;
     endpointURL(): any;
     closeAndRetry(code: any, reason: any, wasClean: any): void;

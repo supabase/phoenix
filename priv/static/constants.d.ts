@@ -2,35 +2,40 @@ export const globalSelf: (Window & typeof globalThis) | null;
 export const phxWindow: (Window & typeof globalThis) | null;
 export const global: typeof globalThis;
 export const DEFAULT_VSN: "2.0.0";
-export namespace SOCKET_STATES {
-    let connecting: number;
-    let open: number;
-    let closing: number;
-    let closed: number;
-}
 export const DEFAULT_TIMEOUT: 10000;
 export const WS_CLOSE_NORMAL: 1000;
+export namespace SOCKET_STATES {
+    let connecting: 0;
+    let open: 1;
+    let closing: 2;
+    let closed: 3;
+}
 export namespace CHANNEL_STATES {
-    let closed_1: string;
+    let closed_1: "closed";
     export { closed_1 as closed };
-    export let errored: string;
-    export let joined: string;
-    export let joining: string;
-    export let leaving: string;
+    export let errored: "errored";
+    export let joined: "joined";
+    export let joining: "joining";
+    export let leaving: "leaving";
 }
 export namespace CHANNEL_EVENTS {
-    let close: string;
-    let error: string;
-    let join: string;
-    let reply: string;
-    let leave: string;
+    let close: "phx_close";
+    let error: "phx_error";
+    let join: "phx_join";
+    let reply: "phx_reply";
+    let leave: "phx_leave";
 }
 export namespace TRANSPORTS {
-    let longpoll: string;
-    let websocket: string;
+    let longpoll: "longpoll";
+    let websocket: "websocket";
 }
 export namespace XHR_STATES {
-    let complete: number;
+    let complete: 4;
 }
 export const AUTH_TOKEN_PREFIX: "base64url.bearer.phx.";
+export type SocketState = (typeof SOCKET_STATES)[keyof typeof SOCKET_STATES];
+export type ChannelState = (typeof CHANNEL_STATES)[keyof typeof CHANNEL_STATES];
+export type ChannelEvent = (typeof CHANNEL_EVENTS)[keyof typeof CHANNEL_EVENTS];
+export type Transport = (typeof TRANSPORTS)[keyof typeof TRANSPORTS];
+export type XhrState = (typeof XHR_STATES)[keyof typeof XHR_STATES];
 //# sourceMappingURL=constants.d.ts.map

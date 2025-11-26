@@ -6,7 +6,7 @@
  */
 export default class Channel {
     constructor(topic: any, params: any, socket: any);
-    state: string;
+    state: "closed";
     topic: any;
     params: () => any;
     socket: any;
