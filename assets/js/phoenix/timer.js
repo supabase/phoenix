@@ -12,14 +12,20 @@
  * reconnectTimer.reset()
  * reconnectTimer.scheduleTimeout() // fires after 1000
  *
- * @param {Function} callback
- * @param {Function} timerCalc
  */
 export default class Timer {
+  /**
+  * @param {() => void} callback
+  * @param {(tries: number) => number} timerCalc
+  */
   constructor(callback, timerCalc){
+    /** @type {() => void} */
     this.callback = callback
+    /** @type {(tries: number) => number} */
     this.timerCalc = timerCalc
+    /** @type {ReturnType<typeof setTimeout> | null} */
     this.timer = null
+    /** @type {number} */
     this.tries = 0
   }
 
