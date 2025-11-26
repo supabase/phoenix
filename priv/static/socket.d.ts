@@ -121,7 +121,7 @@ export default class Socket {
     reconnectAfterMs: (tries: any) => any;
     logger: any;
     longpollerTimeout: any;
-    params: any;
+    params: () => any;
     endPoint: string;
     vsn: any;
     heartbeatTimeoutTimer: NodeJS.Timeout | null;

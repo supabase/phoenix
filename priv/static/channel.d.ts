@@ -8,7 +8,7 @@ export default class Channel {
     constructor(topic: any, params: any, socket: any);
     state: string;
     topic: any;
-    params: any;
+    params: () => any;
     socket: any;
     bindings: any[];
     bindingRef: number;
