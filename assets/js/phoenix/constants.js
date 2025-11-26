@@ -6,6 +6,10 @@ export const DEFAULT_TIMEOUT = 10000
 export const WS_CLOSE_NORMAL = 1000
 
 /**
+ * @typedef {"1.0.0" | "2.0.0"} Vsn
+ */
+
+/**
  * @typedef {typeof SOCKET_STATES[keyof typeof SOCKET_STATES]} SocketState
  */
 

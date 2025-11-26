@@ -33,6 +33,7 @@ export namespace XHR_STATES {
     let complete: 4;
 }
 export const AUTH_TOKEN_PREFIX: "base64url.bearer.phx.";
+export type Vsn = "1.0.0" | "2.0.0";
 export type SocketState = (typeof SOCKET_STATES)[keyof typeof SOCKET_STATES];
 export type ChannelState = (typeof CHANNEL_STATES)[keyof typeof CHANNEL_STATES];
 export type ChannelEvent = (typeof CHANNEL_EVENTS)[keyof typeof CHANNEL_EVENTS];
