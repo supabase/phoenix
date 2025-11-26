@@ -6,9 +6,11 @@ declare namespace _default {
         let reply: number;
         let broadcast: number;
     }
-    function encode(msg: any, callback: any): any;
-    function decode(rawPayload: any, callback: any): any;
+    function encode(msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T): T;
+    function decode(rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T): T;
+    /** @private */
     function binaryEncode(message: any): any;
+    /** @private */
     function binaryDecode(buffer: any): {
         join_ref: any;
         ref: null;
@@ -25,6 +27,7 @@ declare namespace _default {
             response: any;
         };
     } | undefined;
+    /** @private */
     function decodePush(buffer: any, view: any, decoder: any): {
         join_ref: any;
         ref: null;
@@ -32,6 +35,7 @@ declare namespace _default {
         event: any;
         payload: any;
     };
+    /** @private */
     function decodeReply(buffer: any, view: any, decoder: any): {
         join_ref: any;
         ref: any;
@@ -42,6 +46,7 @@ declare namespace _default {
             response: any;
         };
     };
+    /** @private */
     function decodeBroadcast(buffer: any, view: any, decoder: any): {
         join_ref: null;
         ref: null;
@@ -51,4 +56,13 @@ declare namespace _default {
     };
 }
 export default _default;
+export type Message<T> = ({
+    join_ref?: string | null;
+    ref?: string | null;
+    event: string;
+    topic: string;
+    payload: T;
+});
+export type Encode<T> = (msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T;
+export type Decode<T> = (rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T;
 //# sourceMappingURL=serializer.d.ts.map

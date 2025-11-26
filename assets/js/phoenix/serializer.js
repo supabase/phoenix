@@ -3,11 +3,30 @@ import {
   CHANNEL_EVENTS
 } from "./constants"
 
+/**
+ * @template T
+ * @typedef {({
+ * join_ref?: string | null;
+ * ref?: string | null;
+ * event: string;
+ * topic: string;
+ * payload: T;
+ * })} Message
+ */
+
+ /**
+ * @template T
+ * @typedef {(msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T} Encode
+ * @typedef {(rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T} Decode
+ */
+
+
 export default {
   HEADER_LENGTH: 1,
   META_LENGTH: 4,
   KINDS: {push: 0, reply: 1, broadcast: 2},
 
+  /** @type{Encode<T>} */
   encode(msg, callback){
     if(msg.payload.constructor === ArrayBuffer){
       return callback(this.binaryEncode(msg))
@@ -17,6 +36,7 @@ export default {
     }
   },
 
+  /** @type{Decode<T>} */
   decode(rawPayload, callback){
     if(rawPayload.constructor === ArrayBuffer){
       return callback(this.binaryDecode(rawPayload))
@@ -26,8 +46,7 @@ export default {
     }
   },
 
-  // private
-
+  /** @private */
   binaryEncode(message){
     let {join_ref, ref, event, topic, payload} = message
     let metaLength = this.META_LENGTH + join_ref.length + ref.length + topic.length + event.length
@@ -52,6 +71,7 @@ export default {
     return combined.buffer
   },
 
+  /** @private */
   binaryDecode(buffer){
     let view = new DataView(buffer)
     let kind = view.getUint8(0)
@@ -63,6 +83,7 @@ export default {
     }
   },
 
+  /** @private */
   decodePush(buffer, view, decoder){
     let joinRefSize = view.getUint8(1)
     let topicSize = view.getUint8(2)
@@ -78,6 +99,7 @@ export default {
     return {join_ref: joinRef, ref: null, topic: topic, event: event, payload: data}
   },
 
+  /** @private */
   decodeReply(buffer, view, decoder){
     let joinRefSize = view.getUint8(1)
     let refSize = view.getUint8(2)
@@ -97,6 +119,7 @@ export default {
     return {join_ref: joinRef, ref: ref, topic: topic, event: CHANNEL_EVENTS.reply, payload: payload}
   },
 
+  /** @private */
   decodeBroadcast(buffer, view, decoder){
     let topicSize = view.getUint8(1)
     let eventSize = view.getUint8(2)

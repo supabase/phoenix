@@ -108,8 +108,8 @@ export default class Socket {
     fallbackTimer: NodeJS.Timeout | null;
     sessionStore: any;
     establishedConnections: number;
-    defaultEncoder: (msg: any, callback: any) => any;
-    defaultDecoder: (rawPayload: any, callback: any) => any;
+    defaultEncoder: import("./serializer").Encode<T>;
+    defaultDecoder: import("./serializer").Decode<T>;
     closeWasClean: boolean;
     disconnecting: boolean;
     binaryType: any;
