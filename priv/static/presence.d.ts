@@ -1,20 +1,6 @@
 /**
  * @import Channel from "./channel"
- * @typedef {{state: string, diff: string}} Events
- * @typedef {(key: string, currentPresence: PresenceState, newPresence: PresenceState) => void} OnJoin
- * @typedef {(key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void} OnLeave
- * @typedef {() => void} OnSync
- * @typedef {Record<string, PresenceState>} State
- * @typedef {({joins: State, leaves: State})} Diff
- * @typedef {(
-    {
-      metas: {
-        phx_ref?: string
-        phx_ref_prev?: string
-        [key: string]: any
-      }[]
-    }
-  )} PresenceState
+ * @import { Events, OnJoin, OnLeave, OnSync, State, Diff, PresenceState } from "./types"
  */
 export default class Presence {
     /**
@@ -114,24 +100,12 @@ export default class Presence {
     list<T = PresenceState>(by?: ((key: string, obj: PresenceState) => T)): T[];
     inPendingSyncState(): boolean;
 }
-export type Events = {
-    state: string;
-    diff: string;
-};
-export type OnJoin = (key: string, currentPresence: PresenceState, newPresence: PresenceState) => void;
-export type OnLeave = (key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void;
-export type OnSync = () => void;
-export type State = Record<string, PresenceState>;
-export type Diff = ({
-    joins: State;
-    leaves: State;
-});
-export type PresenceState = ({
-    metas: {
-        phx_ref?: string;
-        phx_ref_prev?: string;
-        [key: string]: any;
-    }[];
-});
+import type { State } from "./types";
+import type { Diff } from "./types";
 import type Channel from "./channel";
+import type { OnJoin } from "./types";
+import type { OnLeave } from "./types";
+import type { OnSync } from "./types";
+import type { PresenceState } from "./types";
+import type { Events } from "./types";
 //# sourceMappingURL=presence.d.ts.map

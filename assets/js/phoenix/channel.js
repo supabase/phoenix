@@ -9,13 +9,7 @@ import Timer from "./timer"
 
 /**
 * @import Socket from "./socket"
-* @import { ChannelState } from "./constants"
-*/
-
-/**
-* @typedef {Record<string, unknown>} Params
-* @typedef {(payload: unknown, ref: number, joinRef: number) => void} BindingCallback
-* @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
+* @import { ChannelState, Params, BindingCallback, Binding } from "./types"
 */
 
 export default class Channel {

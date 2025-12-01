@@ -68,13 +68,5 @@ declare namespace _default {
     };
 }
 export default _default;
-export type Message<T> = ({
-    join_ref?: string | null;
-    ref?: string | null;
-    event: string;
-    topic: string;
-    payload: T;
-});
-export type Encode<T> = (msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T;
-export type Decode<T> = (rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T;
+import type { Message } from "./types";
 //# sourceMappingURL=serializer.d.ts.map

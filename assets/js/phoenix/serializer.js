@@ -4,26 +4,8 @@ import {
 } from "./constants"
 
 /**
- * @template T
- * @typedef {({
- * join_ref?: string | null;
- * ref?: string | null;
- * event: string;
- * topic: string;
- * payload: T;
- * })} Message
+ * @import { Message } from "./types"
  */
-
- /**
- * @template T
- * @typedef {(msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T} Encode
- */
-
- /**
- * @template T
- * @typedef {(rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T} Decode
- */
-
 
 export default {
   HEADER_LENGTH: 1,

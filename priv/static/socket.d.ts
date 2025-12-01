@@ -1,100 +1,6 @@
 /**
-* @import { Message } from "./serializer"
-* @import { Decode } from "./serializer"
-* @import { Encode } from "./serializer"
-* @import { Vsn } from "./constants"
+* @import { Message, Vsn, Transport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
 */
-/**
-* @typedef {typeof WebSocket | typeof LongPoll} Transport
-* @typedef {() => Record<string, any> | Record<string, any>} Params
-* @typedef {() => void} OnOpenCallback
-* @typedef {(event: CloseEvent) => void} OnCloseCallback
-* @typedef {(error, transportBefore, establishedBefore) => void} OnErrorCallback
-* @typedef {(rawMessage: MessageEvent<any>) => void} OnMessageCallback
-* @typedef {({
-    open: [string, OnOpenCallback][]
-    close: [string, OnCloseCallback][]
-    error: [string, OnErrorCallback][]
-    message: [string, OnMessageCallback][]
-  })} StateChangeCallbacks
-*/
-/**
- * @typedef {Object} SocketOptions
- * @property {Transport} [opts.transport] - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
- *
- * @property {number} [opts.longPollFallbackMs] - The millisecond time to attempt the primary transport
- * before falling back to the LongPoll transport. Disabled by default.
- *
- * @property {boolean} [opts.debug] - When true, enables debug logging. Default false.
- *
- * @property {Encode<any>} [opts.encode] - The function to encode outgoing messages.
- * Defaults to JSON encoder.
- *
- * @property {Decode<any>} [opts.decode] - The function to decode incoming messages.
- * Defaults to JSON:
- *
- * ```javascript
- * (payload, callback) => callback(JSON.parse(payload))
- * ```
- *
- * @property {number} [opts.timeout] - The default timeout in milliseconds to trigger push timeouts.
- * Defaults `DEFAULT_TIMEOUT`
- * @property {number} [opts.heartbeatIntervalMs] - The millisec interval to send a heartbeat message
- *
- * @property {(tries: number) => number} [opts.reconnectAfterMs] - The optional function that returns the
- * socket reconnect interval, in milliseconds.
- *
- * Defaults to stepped backoff of:
- *
- * ```javascript
- * function(tries){
- *   return [10, 50, 100, 150, 200, 250, 500, 1000, 2000][tries - 1] || 5000
- * }
- * ````
- *
- * @property {(tries: number) => number} [opts.rejoinAfterMs] - The optional function that returns the millisec
- * rejoin interval for individual channels.
- *
- * ```javascript
- * function(tries){
- *   return [1000, 2000, 5000][tries - 1] || 10000
- * }
- * ````
- *
- * @property {(kind: string, msg: string, data: any) => void} [opts.logger] - The optional function for specialized logging, ie:
- *
- * ```javascript
- * function(kind, msg, data) {
- *   console.log(`${kind}: ${msg}`, data)
- * }
- * ```
- *
- * @property {} [opts.params] - The optional params to pass when connecting
- *
- * @property {string} [opts.authToken] - the optional authentication token to be exposed on the server
- * under the `:auth_token` connect_info key.
- *
- * @property {BinaryType} [opts.binaryType] - The binary type to use for binary WebSocket frames.
- *
- * Defaults to "arraybuffer"
- *
- * @property {Vsn} [opts.vsn] - The serializer's protocol version to send on connect.
- *
- * Defaults to DEFAULT_VSN.
- *
- * @property {Storage} [opts.sessionStorage] - An optional Storage compatible object
- * Phoenix uses sessionStorage for longpoll fallback history. Overriding the store is
- * useful when Phoenix won't have access to `sessionStorage`. For example, This could
- * happen if a site loads a cross-domain channel in an iframe. Example usage:
- *
- *     class InMemoryStorage {
- *       constructor() { this.storage = {} }
- *       getItem(keyName) { return this.storage[keyName] || null }
- *       removeItem(keyName) { delete this.storage[keyName] }
- *       setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
- *     }
- *
- */
 export default class Socket {
     /** Initializes the Socket *
      *
@@ -132,8 +38,8 @@ export default class Socket {
     binaryType: BinaryType;
     connectClock: number;
     pageHidden: boolean;
-    encode: (<T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T) | Encode<any>;
-    decode: (<T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T) => T) | Decode<any>;
+    encode: import("./types").Encode<any> | (<T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T);
+    decode: import("./types").Decode<any> | (<T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T) => T);
     /** @type{number} */
     heartbeatIntervalMs: number;
     /** @type{(tries: number) => number} */
@@ -165,7 +71,7 @@ export default class Socket {
      *
      */
     replaceTransport(newTransport: Transport): void;
-    conn: LongPoll | WebSocket | null | undefined;
+    conn: any;
     /**
      * Returns the socket protocol
      *
@@ -315,130 +221,17 @@ export default class Socket {
     onConnMessage(rawMessage: MessageEvent<any>): void;
     leaveOpenTopic(topic: any): void;
 }
-export type Transport = typeof WebSocket | typeof LongPoll;
-export type Params = () => Record<string, any> | Record<string, any>;
-export type OnOpenCallback = () => void;
-export type OnCloseCallback = (event: CloseEvent) => void;
-export type OnErrorCallback = (error: any, transportBefore: any, establishedBefore: any) => void;
-export type OnMessageCallback = (rawMessage: MessageEvent<any>) => void;
-export type StateChangeCallbacks = ({
-    open: [string, OnOpenCallback][];
-    close: [string, OnCloseCallback][];
-    error: [string, OnErrorCallback][];
-    message: [string, OnMessageCallback][];
-});
-export type SocketOptions = {
-    /**
-     * - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
-     */
-    transport?: Transport | undefined;
-    /**
-     * - The millisecond time to attempt the primary transport
-     * before falling back to the LongPoll transport. Disabled by default.
-     */
-    longPollFallbackMs?: number | undefined;
-    /**
-     * - When true, enables debug logging. Default false.
-     */
-    debug?: boolean | undefined;
-    /**
-     * - The function to encode outgoing messages.
-     * Defaults to JSON encoder.
-     */
-    encode?: Encode<any> | undefined;
-    /**
-     * - The function to decode incoming messages.
-     * Defaults to JSON:
-     *
-     * ```javascript
-     * (payload, callback) => callback(JSON.parse(payload))
-     * ```
-     */
-    decode?: Decode<any> | undefined;
-    /**
-     * - The default timeout in milliseconds to trigger push timeouts.
-     * Defaults `DEFAULT_TIMEOUT`
-     */
-    timeout?: number | undefined;
-    /**
-     * - The millisec interval to send a heartbeat message
-     */
-    heartbeatIntervalMs?: number | undefined;
-    /**
-     * - The optional function that returns the
-     * socket reconnect interval, in milliseconds.
-     *
-     * Defaults to stepped backoff of:
-     *
-     * ```javascript
-     * function(tries){
-     * return [10, 50, 100, 150, 200, 250, 500, 1000, 2000][tries - 1] || 5000
-     * }
-     * ````
-     */
-    reconnectAfterMs?: ((tries: number) => number) | undefined;
-    /**
-     * - The optional function that returns the millisec
-     * rejoin interval for individual channels.
-     *
-     * ```javascript
-     * function(tries){
-     * return [1000, 2000, 5000][tries - 1] || 10000
-     * }
-     * ````
-     */
-    rejoinAfterMs?: ((tries: number) => number) | undefined;
-    /**
-     * - The optional function for specialized logging, ie:
-     *
-     * ```javascript
-     * function(kind, msg, data) {
-     * console.log(`${kind}: ${msg}`, data)
-     * }
-     * ```
-     */
-    logger?: ((kind: string, msg: string, data: any) => void) | undefined;
-    /**
-     * - The optional params to pass when connecting
-     */
-    params?: any;
-    /**
-     * - the optional authentication token to be exposed on the server
-     * under the `:auth_token` connect_info key.
-     */
-    authToken?: string | undefined;
-    /**
-     * - The binary type to use for binary WebSocket frames.
-     *
-     * Defaults to "arraybuffer"
-     */
-    binaryType?: BinaryType | undefined;
-    /**
-     * - The serializer's protocol version to send on connect.
-     *
-     * Defaults to DEFAULT_VSN.
-     */
-    vsn?: Vsn | undefined;
-    /**
-     * - An optional Storage compatible object
-     * Phoenix uses sessionStorage for longpoll fallback history. Overriding the store is
-     * useful when Phoenix won't have access to `sessionStorage`. For example, This could
-     * happen if a site loads a cross-domain channel in an iframe. Example usage:
-     *
-     * class InMemoryStorage {
-     * constructor() { this.storage = {} }
-     * getItem(keyName) { return this.storage[keyName] || null }
-     * removeItem(keyName) { delete this.storage[keyName] }
-     * setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
-     * }
-     */
-    sessionStorage?: Storage | undefined;
-};
-import type { Message } from "./serializer";
-import type { Encode } from "./serializer";
-import type { Decode } from "./serializer";
-import type { Vsn } from "./constants";
+import type { StateChangeCallbacks } from "./types";
+import type { Transport } from "./types";
+import type { Message } from "./types";
+import type { Vsn } from "./types";
 import Timer from "./timer";
 import LongPoll from "./longpoll";
+import type { Params } from "./types";
+import type { OnOpenCallback } from "./types";
+import type { OnCloseCallback } from "./types";
+import type { OnErrorCallback } from "./types";
+import type { OnMessageCallback } from "./types";
 import Channel from "./channel";
+import type { SocketOptions } from "./types";
 //# sourceMappingURL=socket.d.ts.map

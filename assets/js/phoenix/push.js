@@ -1,6 +1,6 @@
 /**
  * @import Channel from "./channel"
- * @import { ChannelEvent } from "./constants"
+ * @import { ChannelEvent } from "./types"
  */
 export default class Push {
   /**

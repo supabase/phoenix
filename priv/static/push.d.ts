@@ -1,6 +1,6 @@
 /**
  * @import Channel from "./channel"
- * @import { ChannelEvent } from "./constants"
+ * @import { ChannelEvent } from "./types"
  */
 export default class Push {
     /**
@@ -73,5 +73,5 @@ export default class Push {
     private trigger;
 }
 import type Channel from "./channel";
-import type { ChannelEvent } from "./constants";
+import type { ChannelEvent } from "./types";
 //# sourceMappingURL=push.d.ts.map

@@ -1,11 +1,6 @@
 /**
 * @import Socket from "./socket"
-* @import { ChannelState } from "./constants"
-*/
-/**
-* @typedef {Record<string, unknown>} Params
-* @typedef {(payload: unknown, ref: number, joinRef: number) => void} BindingCallback
-* @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
+* @import { ChannelState, Params, BindingCallback, Binding } from "./types"
 */
 export default class Channel {
     /**
@@ -184,15 +179,11 @@ export default class Channel {
      */
     private isLeaving;
 }
-export type Params = Record<string, unknown>;
-export type BindingCallback = (payload: unknown, ref: number, joinRef: number) => void;
-export type Binding = ({
-    event: string;
-    ref: number;
-    callback: BindingCallback;
-});
-import type { ChannelState } from "./constants";
+import type { ChannelState } from "./types";
 import type Socket from "./socket";
+import type { Binding } from "./types";
 import Push from "./push";
 import Timer from "./timer";
+import type { BindingCallback } from "./types";
+import type { Params } from "./types";
 //# sourceMappingURL=channel.d.ts.map

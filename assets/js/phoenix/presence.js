@@ -1,20 +1,6 @@
 /**
  * @import Channel from "./channel"
- * @typedef {{state: string, diff: string}} Events
- * @typedef {(key: string, currentPresence: PresenceState, newPresence: PresenceState) => void} OnJoin
- * @typedef {(key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void} OnLeave
- * @typedef {() => void} OnSync
- * @typedef {Record<string, PresenceState>} State
- * @typedef {({joins: State, leaves: State})} Diff
- * @typedef {(
-    {
-      metas: {
-        phx_ref?: string
-        phx_ref_prev?: string
-        [key: string]: any
-      }[]
-    }
-  )} PresenceState
+ * @import { Events, OnJoin, OnLeave, OnSync, State, Diff, PresenceState } from "./types"
  */
 export default class Presence {
 
