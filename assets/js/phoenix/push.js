@@ -1,6 +1,6 @@
 /**
- * @typedef {import("./channel").default} Channel
- * @typedef {import("./constants").ChannelEvent} ChannelEvent
+ * @import Channel from "./channel"
+ * @import { ChannelEvent } from "./constants"
  */
 export default class Push {
   /**

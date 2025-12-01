@@ -17,6 +17,10 @@ import {
  /**
  * @template T
  * @typedef {(msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T} Encode
+ */
+
+ /**
+ * @template T
  * @typedef {(rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T} Decode
  */
 
@@ -26,7 +30,12 @@ export default {
   META_LENGTH: 4,
   KINDS: {push: 0, reply: 1, broadcast: 2},
 
-  /** @type{Encode<T>} */
+  /**
+  * @template T
+  * @param {ArrayBuffer | string} msg
+  * @param {(msg: Message<unknown>) => T} callback
+  * @returns {T}
+  */
   encode(msg, callback){
     if(msg.payload.constructor === ArrayBuffer){
       return callback(this.binaryEncode(msg))
@@ -36,7 +45,12 @@ export default {
     }
   },
 
-  /** @type{Decode<T>} */
+  /**
+  * @template T
+  * @param {Message<Record<string, any>>} rawPayload
+  * @param {(msg: ArrayBuffer | string) => T} callback
+  * @returns {T}
+  */
   decode(rawPayload, callback){
     if(rawPayload.constructor === ArrayBuffer){
       return callback(this.binaryDecode(rawPayload))

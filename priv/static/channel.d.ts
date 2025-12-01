@@ -1,6 +1,9 @@
 /**
+* @import Socket from "./socket"
+* @import { ChannelState } from "./constants"
+*/
+/**
 * @typedef {Record<string, unknown>} Params
-* @typedef {(import("./socket.js").default} Socket
 * @typedef {(payload: unknown, ref: number, joinRef: number) => void} BindingCallback
 * @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
 */
@@ -11,8 +14,8 @@ export default class Channel {
      * @param {Socket} socket
      */
     constructor(topic: string, params: Params | (() => Params), socket: Socket);
-    /** @type{(import("./constants.js").ChannelState} */
-    state: (import("./constants.js").ChannelState);
+    /** @type{ChannelState} */
+    state: ChannelState;
     /** @type{string} */
     topic: string;
     /** @type{string} */
@@ -182,13 +185,14 @@ export default class Channel {
     private isLeaving;
 }
 export type Params = Record<string, unknown>;
-export type Socket = (import("./socket.js").default);
 export type BindingCallback = (payload: unknown, ref: number, joinRef: number) => void;
 export type Binding = ({
     event: string;
     ref: number;
     callback: BindingCallback;
 });
+import type { ChannelState } from "./constants";
+import type Socket from "./socket";
 import Push from "./push";
 import Timer from "./timer";
 //# sourceMappingURL=channel.d.ts.map

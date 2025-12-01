@@ -8,8 +8,12 @@ import Push from "./push"
 import Timer from "./timer"
 
 /**
+* @import Socket from "./socket"
+* @import { ChannelState } from "./constants"
+*/
+
+/**
 * @typedef {Record<string, unknown>} Params
-* @typedef {(import("./socket.js").default} Socket
 * @typedef {(payload: unknown, ref: number, joinRef: number) => void} BindingCallback
 * @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
 */
@@ -21,7 +25,7 @@ export default class Channel {
  * @param {Socket} socket
  */
   constructor(topic, params, socket){
-    /** @type{(import("./constants.js").ChannelState} */
+    /** @type{ChannelState} */
     this.state = CHANNEL_STATES.closed
     /** @type{string} */
     this.topic = topic

@@ -1,6 +1,6 @@
 /**
- * @typedef {import("./channel").default} Channel
- * @typedef {import("./constants").ChannelEvent} ChannelEvent
+ * @import Channel from "./channel"
+ * @import { ChannelEvent } from "./constants"
  */
 export default class Push {
     /**
@@ -72,6 +72,6 @@ export default class Push {
      */
     private trigger;
 }
-export type Channel = import("./channel").default;
-export type ChannelEvent = import("./constants").ChannelEvent;
+import type Channel from "./channel";
+import type { ChannelEvent } from "./constants";
 //# sourceMappingURL=push.d.ts.map

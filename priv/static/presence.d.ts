@@ -1,5 +1,5 @@
 /**
- * @typedef {import("./channel").default} Channel
+ * @import Channel from "./channel"
  * @typedef {{state: string, diff: string}} Events
  * @typedef {(key: string, currentPresence: PresenceState, newPresence: PresenceState) => void} OnJoin
  * @typedef {(key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void} OnLeave
@@ -114,7 +114,6 @@ export default class Presence {
     list<T = PresenceState>(by?: ((key: string, obj: PresenceState) => T)): T[];
     inPendingSyncState(): boolean;
 }
-export type Channel = import("./channel").default;
 export type Events = {
     state: string;
     diff: string;
@@ -134,4 +133,5 @@ export type PresenceState = ({
         [key: string]: any;
     }[];
 });
+import type Channel from "./channel";
 //# sourceMappingURL=presence.d.ts.map

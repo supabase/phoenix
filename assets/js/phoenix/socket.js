@@ -21,9 +21,10 @@ import Serializer from "./serializer"
 import Timer from "./timer"
 
 /**
-* @template T
-* @typedef {import("./serializer.js").Message<T>} Message<T>
-* @ignore
+* @import { Message } from "./serializer"
+* @import { Decode } from "./serializer"
+* @import { Encode } from "./serializer"
+* @import { Vsn } from "./constants"
 */
 
 /**
@@ -50,10 +51,10 @@ import Timer from "./timer"
  *
  * @property {boolean} [opts.debug] - When true, enables debug logging. Default false.
  *
- * @property {import("./serializer").Encode<any>} [opts.encode] - The function to encode outgoing messages.
+ * @property {Encode<any>} [opts.encode] - The function to encode outgoing messages.
  * Defaults to JSON encoder.
  *
- * @property {import("./serializer").Decode<any>} [opts.decode] - The function to decode incoming messages.
+ * @property {Decode<any>} [opts.decode] - The function to decode incoming messages.
  * Defaults to JSON:
  *
  * ```javascript
@@ -101,7 +102,7 @@ import Timer from "./timer"
  *
  * Defaults to "arraybuffer"
  *
- * @property {import("./constants").Vsn} [opts.vsn] - The serializer's protocol version to send on connect.
+ * @property {Vsn} [opts.vsn] - The serializer's protocol version to send on connect.
  *
  * Defaults to DEFAULT_VSN.
  *
@@ -216,7 +217,7 @@ export default class Socket {
     /** @type{() => Record<string, any>} */
     this.params = closure(opts.params || {})
     this.endPoint = `${endPoint}/${TRANSPORTS.websocket}`
-    /** @type{import("./constants").Vsn} */
+    /** @type{Vsn} */
     this.vsn = opts.vsn || DEFAULT_VSN
     this.heartbeatTimeoutTimer = null
     this.heartbeatTimer = null

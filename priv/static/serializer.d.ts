@@ -6,8 +6,20 @@ declare namespace _default {
         let reply: number;
         let broadcast: number;
     }
-    function encode(msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T): T;
-    function decode(rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T): T;
+    /**
+    * @template T
+    * @param {ArrayBuffer | string} msg
+    * @param {(msg: Message<unknown>) => T} callback
+    * @returns {T}
+    */
+    function encode<T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T): T;
+    /**
+    * @template T
+    * @param {Message<Record<string, any>>} rawPayload
+    * @param {(msg: ArrayBuffer | string) => T} callback
+    * @returns {T}
+    */
+    function decode<T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T): T;
     /** @private */
     function binaryEncode(message: any): any;
     /** @private */

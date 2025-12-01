@@ -1,7 +1,8 @@
 /**
-* @template T
-* @typedef {import("./serializer.js").Message<T>} Message<T>
-* @ignore
+* @import { Message } from "./serializer"
+* @import { Decode } from "./serializer"
+* @import { Encode } from "./serializer"
+* @import { Vsn } from "./constants"
 */
 /**
 * @typedef {typeof WebSocket | typeof LongPoll} Transport
@@ -26,10 +27,10 @@
  *
  * @property {boolean} [opts.debug] - When true, enables debug logging. Default false.
  *
- * @property {import("./serializer").Encode<any>} [opts.encode] - The function to encode outgoing messages.
+ * @property {Encode<any>} [opts.encode] - The function to encode outgoing messages.
  * Defaults to JSON encoder.
  *
- * @property {import("./serializer").Decode<any>} [opts.decode] - The function to decode incoming messages.
+ * @property {Decode<any>} [opts.decode] - The function to decode incoming messages.
  * Defaults to JSON:
  *
  * ```javascript
@@ -77,7 +78,7 @@
  *
  * Defaults to "arraybuffer"
  *
- * @property {import("./constants").Vsn} [opts.vsn] - The serializer's protocol version to send on connect.
+ * @property {Vsn} [opts.vsn] - The serializer's protocol version to send on connect.
  *
  * Defaults to DEFAULT_VSN.
  *
@@ -123,16 +124,16 @@ export default class Socket {
     /** @type{Storage} */
     sessionStore: Storage;
     establishedConnections: number;
-    defaultEncoder: import("./serializer").Encode<T>;
-    defaultDecoder: import("./serializer").Decode<T>;
+    defaultEncoder: <T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T;
+    defaultDecoder: <T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T) => T;
     closeWasClean: boolean;
     disconnecting: boolean;
     /** @type{BinaryType} */
     binaryType: BinaryType;
     connectClock: number;
     pageHidden: boolean;
-    encode: import("./serializer").Encode<T>;
-    decode: import("./serializer").Decode<T>;
+    encode: (<T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T) | Encode<any>;
+    decode: (<T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T) => T) | Decode<any>;
     /** @type{number} */
     heartbeatIntervalMs: number;
     /** @type{(tries: number) => number} */
@@ -145,8 +146,8 @@ export default class Socket {
     /** @type{() => Record<string, any>} */
     params: () => Record<string, any>;
     endPoint: string;
-    /** @type{import("./constants").Vsn} */
-    vsn: import("./constants").Vsn;
+    /** @type{Vsn} */
+    vsn: Vsn;
     heartbeatTimeoutTimer: NodeJS.Timeout | null;
     heartbeatTimer: NodeJS.Timeout | null;
     pendingHeartbeatRef: string | null;
@@ -314,10 +315,6 @@ export default class Socket {
     onConnMessage(rawMessage: MessageEvent<any>): void;
     leaveOpenTopic(topic: any): void;
 }
-/**
- * <T>
- */
-export type Message<T> = import("./serializer.js").Message<T>;
 export type Transport = typeof WebSocket | typeof LongPoll;
 export type Params = () => Record<string, any> | Record<string, any>;
 export type OnOpenCallback = () => void;
@@ -348,7 +345,7 @@ export type SocketOptions = {
      * - The function to encode outgoing messages.
      * Defaults to JSON encoder.
      */
-    encode?: import("./serializer").Encode<any> | undefined;
+    encode?: Encode<any> | undefined;
     /**
      * - The function to decode incoming messages.
      * Defaults to JSON:
@@ -357,7 +354,7 @@ export type SocketOptions = {
      * (payload, callback) => callback(JSON.parse(payload))
      * ```
      */
-    decode?: import("./serializer").Decode<any> | undefined;
+    decode?: Decode<any> | undefined;
     /**
      * - The default timeout in milliseconds to trigger push timeouts.
      * Defaults `DEFAULT_TIMEOUT`
@@ -421,7 +418,7 @@ export type SocketOptions = {
      *
      * Defaults to DEFAULT_VSN.
      */
-    vsn?: import("./constants").Vsn | undefined;
+    vsn?: Vsn | undefined;
     /**
      * - An optional Storage compatible object
      * Phoenix uses sessionStorage for longpoll fallback history. Overriding the store is
@@ -437,6 +434,10 @@ export type SocketOptions = {
      */
     sessionStorage?: Storage | undefined;
 };
+import type { Message } from "./serializer";
+import type { Encode } from "./serializer";
+import type { Decode } from "./serializer";
+import type { Vsn } from "./constants";
 import Timer from "./timer";
 import LongPoll from "./longpoll";
 import Channel from "./channel";

@@ -1,5 +1,5 @@
 /**
- * @typedef {import("./channel").default} Channel
+ * @import Channel from "./channel"
  * @typedef {{state: string, diff: string}} Events
  * @typedef {(key: string, currentPresence: PresenceState, newPresence: PresenceState) => void} OnJoin
  * @typedef {(key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void} OnLeave
