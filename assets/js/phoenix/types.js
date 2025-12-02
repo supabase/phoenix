@@ -1,6 +1,16 @@
 /**
- * CHANNEL
+ * MISC
  * @typedef {Record<string, unknown>} Params
+ */
+
+/**
+ * @template T
+ * @typedef {T | () => T} Closure
+ *
+ */
+
+/**
+ * CHANNEL
  * @typedef {(payload: unknown, ref: number, joinRef: number) => void} BindingCallback
  * @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
  */
@@ -57,7 +67,6 @@
 /**
  * SOCKET
  * @typedef {typeof WebSocket | typeof LongPoll} Transport
- * @typedef {() => Record<string, any> | Record<string, any>} Params
  * @typedef {() => void} OnOpenCallback
  * @typedef {(event: CloseEvent) => void} OnCloseCallback
  * @typedef {(error, transportBefore, establishedBefore) => void} OnErrorCallback
@@ -121,7 +130,7 @@
  * }
  * ```
  *
- * @property {} [opts.params] - The optional params to pass when connecting
+ * @property {Closure<Params>} [opts.params] - The optional params to pass when connecting
  *
  * @property {string} [opts.authToken] - the optional authentication token to be exposed on the server
  * under the `:auth_token` connect_info key.

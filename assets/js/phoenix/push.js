@@ -22,11 +22,11 @@ export default class Push {
     this.timeout = timeout
     /** @type{(ReturnType<typeof setTimeout>) | null} */
     this.timeoutTimer = null
-    // FIXME
+    /** @type{{status: string; callback: (response: any) => void}[]} */
     this.recHooks = []
     /** @type{boolean} */
     this.sent = false
-    /** @type{number} */
+    /** @type{number | undefined} */
     this.ref = undefined
   }
 

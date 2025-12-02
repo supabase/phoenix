@@ -23,7 +23,7 @@ export default class Channel {
     this.state = CHANNEL_STATES.closed
     /** @type{string} */
     this.topic = topic
-    /** @type{string} */
+    /** @type{() => Params} */
     this.params = closure(params || {})
     /** @type {Socket} */
     this.socket = socket
@@ -111,10 +111,10 @@ export default class Channel {
     this.on(CHANNEL_EVENTS.close, callback)
   }
 
-  // FIXME
   /**
    * Hook into channel errors
    * @param {(reason: unknown) => void} callback
+   * @return {number}
    */
   onError(callback){
     return this.on(CHANNEL_EVENTS.error, reason => callback(reason))
@@ -240,7 +240,6 @@ export default class Channel {
   }
 
   /**
-   * @abstract
    * Overridable message hook
    *
    * Receives all events for specialized message handling

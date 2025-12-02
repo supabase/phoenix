@@ -18,7 +18,7 @@ export default class Presence {
     this.pendingDiffs = []
     /** @type{Channel} */
     this.channel = channel
-    /** @type{number} */
+    /** @type{?number} */
     this.joinRef = null
     /** @type{({ onJoin: OnJoin; onLeave: OnLeave; onSync: OnSync })} */
     this.caller = {

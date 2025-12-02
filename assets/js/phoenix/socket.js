@@ -118,7 +118,7 @@ export default class Socket {
       this.logger = (kind, msg, data) => { console.log(`${kind}: ${msg}`, data) }
     }
     this.longpollerTimeout = opts.longpollerTimeout || 20000
-    /** @type{() => Record<string, any>} */
+    /** @type{() => Params} */
     this.params = closure(opts.params || {})
     this.endPoint = `${endPoint}/${TRANSPORTS.websocket}`
     /** @type{Vsn} */
@@ -251,6 +251,7 @@ export default class Socket {
   /**
    * Registers callbacks for connection close events
    * @param {OnCloseCallback} callback
+   * @returns {string}
    */
   onClose(callback){
     let ref = this.makeRef()
@@ -264,6 +265,7 @@ export default class Socket {
    * @example socket.onError(function(error){ alert("An error occurred") })
    *
    * @param {OnErrorCallback} callback
+   * @returns {string}
    */
   onError(callback){
     let ref = this.makeRef()
@@ -274,6 +276,7 @@ export default class Socket {
   /**
    * Registers callbacks for connection message events
    * @param {OnMessageCallback} callback
+   * @returns {string}
    */
   onMessage(callback){
     let ref = this.makeRef()
@@ -545,7 +548,7 @@ export default class Socket {
    * Initiates a new channel for the given topic
    *
    * @param {string} topic
-   * @param {Record<string, unknown> | () => Record<string, unknown>} [chanParams]- Parameters for the channel
+   * @param {Params | () => Params} [chanParams]- Parameters for the channel
    * @returns {Channel}
    */
   channel(topic, chanParams = {}){
