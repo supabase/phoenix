@@ -10,9 +10,11 @@
   "jsdelivr": "./priv/static/phoenix.min.js",
   "exports": {
     "import": {
+      "types": "./priv/static/types/index.d.ts",
       "default": "./priv/static/phoenix.mjs"
     },
     "require": {
+      "types": "./priv/static/types/index.d.ts",
       "default": "./priv/static/phoenix.cjs.js"
     }
   },
