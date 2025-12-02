@@ -1,7 +1,8 @@
 /**
- * CHANNEL
+ * MISC
  */
 export type Params = Record<string, unknown>;
+export type Closure<T> = T | (() => T);
 /**
  * CHANNEL
  */
@@ -99,6 +100,10 @@ export type Decode<T> = (rawPayload: ArrayBuffer | string, callback: (msg: Messa
 /**
  * SOCKET
  */
+export type SocketTransport = (typeof WebSocket | typeof LongPoll);
+/**
+ * SOCKET
+ */
 export type OnOpenCallback = () => void;
 /**
  * SOCKET
@@ -128,12 +133,16 @@ export type SocketOptions = {
     /**
      * - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
      */
-    transport?: Transport | undefined;
+    transport?: SocketTransport | undefined;
     /**
      * - The millisecond time to attempt the primary transport
      * before falling back to the LongPoll transport. Disabled by default.
      */
     longPollFallbackMs?: number | undefined;
+    /**
+     * - The millisecond time before LongPoll transport times out. Default 20000.
+     */
+    longpollerTimeout?: number | undefined;
     /**
      * - When true, enables debug logging. Default false.
      */
@@ -142,7 +151,7 @@ export type SocketOptions = {
      * - The function to encode outgoing messages.
      * Defaults to JSON encoder.
      */
-    encode?: Encode<any> | undefined;
+    encode?: Encode<void> | undefined;
     /**
      * - The function to decode incoming messages.
      * Defaults to JSON:
@@ -151,7 +160,7 @@ export type SocketOptions = {
      * (payload, callback) => callback(JSON.parse(payload))
      * ```
      */
-    decode?: Decode<any> | undefined;
+    decode?: Decode<void> | undefined;
     /**
      * - The default timeout in milliseconds to trigger push timeouts.
      * Defaults `DEFAULT_TIMEOUT`
@@ -198,7 +207,7 @@ export type SocketOptions = {
     /**
      * - The optional params to pass when connecting
      */
-    params?: any;
+    params?: Closure<Params> | undefined;
     /**
      * - the optional authentication token to be exposed on the server
      * under the `:auth_token` connect_info key.
@@ -236,4 +245,5 @@ import type { CHANNEL_STATES } from "./constants";
 import type { CHANNEL_EVENTS } from "./constants";
 import type { TRANSPORTS } from "./constants";
 import type { XHR_STATES } from "./constants";
+import type LongPoll from "./longpoll";
 //# sourceMappingURL=types.d.ts.map

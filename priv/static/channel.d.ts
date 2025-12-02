@@ -13,8 +13,8 @@ export default class Channel {
     state: ChannelState;
     /** @type{string} */
     topic: string;
-    /** @type{string} */
-    params: string;
+    /** @type{() => Params} */
+    params: () => Params;
     /** @type {Socket} */
     socket: Socket;
     /** @type{Binding[]} */
@@ -47,6 +47,7 @@ export default class Channel {
     /**
      * Hook into channel errors
      * @param {(reason: unknown) => void} callback
+     * @return {number}
      */
     onError(callback: (reason: unknown) => void): number;
     /**
@@ -125,7 +126,6 @@ export default class Channel {
      */
     leave(timeout?: number): Push;
     /**
-     * @abstract
      * Overridable message hook
      *
      * Receives all events for specialized message handling
@@ -180,10 +180,10 @@ export default class Channel {
     private isLeaving;
 }
 import type { ChannelState } from "./types";
+import type { Params } from "./types";
 import type Socket from "./socket";
 import type { Binding } from "./types";
 import Push from "./push";
 import Timer from "./timer";
 import type { BindingCallback } from "./types";
-import type { Params } from "./types";
 //# sourceMappingURL=channel.d.ts.map

@@ -1,5 +1,5 @@
 /**
-* @import { Message, Vsn, Transport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
+* @import { Encode, Decode, Message, Vsn, SocketTransport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
 */
 export default class Socket {
     /** Initializes the Socket *
@@ -17,29 +17,43 @@ export default class Socket {
     stateChangeCallbacks: StateChangeCallbacks;
     channels: any[];
     sendBuffer: any[];
+    /** @type{number} */
     ref: number;
     fallbackRef: string | null;
     /** @type{number} */
     timeout: number;
-    /** @type{Transport} */
-    transport: Transport;
+    /** @type{SocketTransport} */
+    transport: SocketTransport;
+    /** @type{InstanceType<SocketTransport> | undefined} */
+    conn: InstanceType<SocketTransport> | undefined;
+    /** @type{boolean} */
     primaryPassedHealthCheck: boolean;
     /** @type{number | undefined} */
     longPollFallbackMs: number | undefined;
-    fallbackTimer: NodeJS.Timeout | null;
+    /** @type{?ReturnType<typeof setTimeout>} */
+    fallbackTimer: ReturnType<typeof setTimeout> | null;
     /** @type{Storage} */
     sessionStore: Storage;
+    /** @type{number} */
     establishedConnections: number;
-    defaultEncoder: <T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T;
-    defaultDecoder: <T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T) => T;
+    /** @type{Encode<void>} */
+    defaultEncoder: Encode<void>;
+    /** @type{Decode<void>} */
+    defaultDecoder: Decode<void>;
+    /** @type{boolean} */
     closeWasClean: boolean;
+    /** @type{boolean} */
     disconnecting: boolean;
     /** @type{BinaryType} */
     binaryType: BinaryType;
+    /** @type{number} */
     connectClock: number;
-    pageHidden: boolean;
-    encode: import("./types").Encode<any> | (<T>(msg: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T);
-    decode: import("./types").Decode<any> | (<T>(rawPayload: Message<Record<string, any>>, callback: (msg: ArrayBuffer | string) => T) => T);
+    /** @type{number} */
+    pageHidden: number;
+    /** @type{Encode<void>} */
+    encode: Encode<void>;
+    /** @type{Decode<void>} */
+    decode: Decode<void>;
     /** @type{number} */
     heartbeatIntervalMs: number;
     /** @type{(tries: number) => number} */
@@ -48,18 +62,24 @@ export default class Socket {
     reconnectAfterMs: (tries: number) => number;
     /** @type{(kind: string, msg: string, data: any) => void} */
     logger: (kind: string, msg: string, data: any) => void;
-    longpollerTimeout: any;
-    /** @type{() => Record<string, any>} */
-    params: () => Record<string, any>;
+    /** @type{number} */
+    longpollerTimeout: number;
+    /** @type{() => Params} */
+    params: () => Params;
+    /** @type{string} */
     endPoint: string;
     /** @type{Vsn} */
     vsn: Vsn;
-    heartbeatTimeoutTimer: NodeJS.Timeout | null;
-    heartbeatTimer: NodeJS.Timeout | null;
+    /** @type{?ReturnType<typeof setTimeout>} */
+    heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null;
+    /** @type{?ReturnType<typeof setTimeout>} */
+    heartbeatTimer: ReturnType<typeof setTimeout> | null;
+    /** @type{?string} */
     pendingHeartbeatRef: string | null;
+    /** @type{Timer} */
     reconnectTimer: Timer;
-    /** @type{[string]} */
-    authToken: [string];
+    /** @type{string | undefined} */
+    authToken: string | undefined;
     /**
      * Returns the LongPoll transport reference
      */
@@ -71,7 +91,6 @@ export default class Socket {
      *
      */
     replaceTransport(newTransport: Transport): void;
-    conn: any;
     /**
      * Returns the socket protocol
      *
@@ -123,6 +142,7 @@ export default class Socket {
     /**
      * Registers callbacks for connection close events
      * @param {OnCloseCallback} callback
+     * @returns {string}
      */
     onClose(callback: OnCloseCallback): string;
     /**
@@ -131,11 +151,13 @@ export default class Socket {
      * @example socket.onError(function(error){ alert("An error occurred") })
      *
      * @param {OnErrorCallback} callback
+     * @returns {string}
      */
     onError(callback: OnErrorCallback): string;
     /**
      * Registers callbacks for connection message events
      * @param {OnMessageCallback} callback
+     * @returns {string}
      */
     onMessage(callback: OnMessageCallback): string;
     /**
@@ -200,10 +222,10 @@ export default class Socket {
      * Initiates a new channel for the given topic
      *
      * @param {string} topic
-     * @param {Record<string, unknown> | () => Record<string, unknown>} [chanParams]- Parameters for the channel
+     * @param {Params | () => Params} [chanParams]- Parameters for the channel
      * @returns {Channel}
      */
-    channel(topic: string, chanParams?: Record<string, unknown> | (() => Record<string, unknown>)): Channel;
+    channel(topic: string, chanParams?: Params | (() => Params)): Channel;
     /**
      * @param {Message<Record<string, any>>} data
      */
@@ -222,16 +244,18 @@ export default class Socket {
     leaveOpenTopic(topic: any): void;
 }
 import type { StateChangeCallbacks } from "./types";
-import type { Transport } from "./types";
-import type { Message } from "./types";
+import type { SocketTransport } from "./types";
+import type { Encode } from "./types";
+import type { Decode } from "./types";
+import type { Params } from "./types";
 import type { Vsn } from "./types";
 import Timer from "./timer";
 import LongPoll from "./longpoll";
-import type { Params } from "./types";
 import type { OnOpenCallback } from "./types";
 import type { OnCloseCallback } from "./types";
 import type { OnErrorCallback } from "./types";
 import type { OnMessageCallback } from "./types";
 import Channel from "./channel";
+import type { Message } from "./types";
 import type { SocketOptions } from "./types";
 //# sourceMappingURL=socket.d.ts.map

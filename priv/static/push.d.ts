@@ -22,11 +22,15 @@ export default class Push {
     timeout: number;
     /** @type{(ReturnType<typeof setTimeout>) | null} */
     timeoutTimer: (ReturnType<typeof setTimeout>) | null;
-    recHooks: any[];
+    /** @type{{status: string; callback: (response: any) => void}[]} */
+    recHooks: {
+        status: string;
+        callback: (response: any) => void;
+    }[];
     /** @type{boolean} */
     sent: boolean;
-    /** @type{number} */
-    ref: number;
+    /** @type{number | undefined} */
+    ref: number | undefined;
     /**
      *
      * @param {number} timeout

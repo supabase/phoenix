@@ -69,8 +69,8 @@ export default class Presence {
     pendingDiffs: Diff[];
     /** @type{Channel} */
     channel: Channel;
-    /** @type{number} */
-    joinRef: number;
+    /** @type{?number} */
+    joinRef: number | null;
     /** @type{({ onJoin: OnJoin; onLeave: OnLeave; onSync: OnSync })} */
     caller: ({
         onJoin: OnJoin;
