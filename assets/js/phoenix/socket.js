@@ -171,7 +171,7 @@ export default class Socket {
   /**
    * Disconnects and replaces the active transport
    *
-   * @param {Transport} newTransport - The new transport class to instantiate
+   * @param {SocketTransport} newTransport - The new transport class to instantiate
    *
    */
   replaceTransport(newTransport){
