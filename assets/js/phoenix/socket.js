@@ -38,13 +38,13 @@ export default class Socket {
   constructor(endPoint, opts = {}){
     /** @type{StateChangeCallbacks} */
     this.stateChangeCallbacks = {open: [], close: [], error: [], message: []}
-    // FIXME
+    /** @type{Channel[]} */
     this.channels = []
-    // FIXME
+    /** @type{(() => void)[]} */
     this.sendBuffer = []
     /** @type{number} */
     this.ref = 0
-    // FIXME
+    /** @type{?string} */
     this.fallbackRef = null
     /** @type{number} */
     this.timeout = opts.timeout || DEFAULT_TIMEOUT

@@ -15,10 +15,13 @@ export default class Socket {
     constructor(endPoint: string, opts?: SocketOptions);
     /** @type{StateChangeCallbacks} */
     stateChangeCallbacks: StateChangeCallbacks;
-    channels: any[];
-    sendBuffer: any[];
+    /** @type{Channel[]} */
+    channels: Channel[];
+    /** @type{(() => void)[]} */
+    sendBuffer: (() => void)[];
     /** @type{number} */
     ref: number;
+    /** @type{?string} */
     fallbackRef: string | null;
     /** @type{number} */
     timeout: number;
@@ -244,6 +247,7 @@ export default class Socket {
     leaveOpenTopic(topic: any): void;
 }
 import type { StateChangeCallbacks } from "./types";
+import Channel from "./channel";
 import type { SocketTransport } from "./types";
 import type { Encode } from "./types";
 import type { Decode } from "./types";
@@ -255,7 +259,6 @@ import type { OnOpenCallback } from "./types";
 import type { OnCloseCallback } from "./types";
 import type { OnErrorCallback } from "./types";
 import type { OnMessageCallback } from "./types";
-import Channel from "./channel";
 import type { Message } from "./types";
 import type { SocketOptions } from "./types";
 //# sourceMappingURL=socket.d.ts.map

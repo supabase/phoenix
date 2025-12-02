@@ -172,7 +172,6 @@ export default class Channel {
    */
   canPush(){ return this.socket.isConnected() && this.isJoined() }
 
-  // FIXME: payload typing?
   /**
    * Sends a message `event` to phoenix with the payload `payload`.
    * Phoenix receives this in the `handle_in(event, payload, socket)`
