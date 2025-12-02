@@ -5,7 +5,7 @@
   "license": "MIT",
   "module": "./priv/static/phoenix.mjs",
   "main": "./priv/static/phoenix.cjs.js",
-  "types": "./priv/static/index.d.ts",
+  "types": "./priv/static/types/index.d.ts",
   "unpkg": "./priv/static/phoenix.min.js",
   "jsdelivr": "./priv/static/phoenix.min.js",
   "exports": {
