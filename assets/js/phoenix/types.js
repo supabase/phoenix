@@ -1,4 +1,8 @@
 /**
+ * @import LongPoll from "./longpoll"
+ */
+
+/**
  * MISC
  * @typedef {Record<string, unknown>} Params
  */
@@ -66,7 +70,7 @@
 
 /**
  * SOCKET
- * @typedef {typeof WebSocket | typeof LongPoll} Transport
+ * @typedef {(typeof WebSocket | typeof LongPoll)} SocketTransport
  * @typedef {() => void} OnOpenCallback
  * @typedef {(event: CloseEvent) => void} OnCloseCallback
  * @typedef {(error, transportBefore, establishedBefore) => void} OnErrorCallback
@@ -81,17 +85,19 @@
  *
  *
  * @typedef {Object} SocketOptions
- * @property {Transport} [opts.transport] - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
+ * @property {SocketTransport} [opts.transport] - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
  *
  * @property {number} [opts.longPollFallbackMs] - The millisecond time to attempt the primary transport
  * before falling back to the LongPoll transport. Disabled by default.
  *
+ * @property {number} [opts.longpollerTimeout] - The millisecond time before LongPoll transport times out. Default 20000.
+ *
  * @property {boolean} [opts.debug] - When true, enables debug logging. Default false.
  *
- * @property {Encode<any>} [opts.encode] - The function to encode outgoing messages.
+ * @property {Encode<void>} [opts.encode] - The function to encode outgoing messages.
  * Defaults to JSON encoder.
  *
- * @property {Decode<any>} [opts.decode] - The function to decode incoming messages.
+ * @property {Decode<void>} [opts.decode] - The function to decode incoming messages.
  * Defaults to JSON:
  *
  * ```javascript

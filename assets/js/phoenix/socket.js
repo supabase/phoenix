@@ -21,7 +21,7 @@ import Serializer from "./serializer"
 import Timer from "./timer"
 
 /**
-* @import { Message, Vsn, Transport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
+* @import { Encode, Decode, Message, Vsn, SocketTransport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
 */
 
 export default class Socket {
@@ -38,29 +38,48 @@ export default class Socket {
   constructor(endPoint, opts = {}){
     /** @type{StateChangeCallbacks} */
     this.stateChangeCallbacks = {open: [], close: [], error: [], message: []}
+    // FIXME
     this.channels = []
+    // FIXME
     this.sendBuffer = []
+    /** @type{number} */
     this.ref = 0
+    // FIXME
     this.fallbackRef = null
     /** @type{number} */
     this.timeout = opts.timeout || DEFAULT_TIMEOUT
-    /** @type{Transport} */
+    /** @type{SocketTransport} */
     this.transport = opts.transport || global.WebSocket || LongPoll
+    /** @type{InstanceType<SocketTransport> | undefined} */
+    this.conn = undefined;
+    /** @type{boolean} */
     this.primaryPassedHealthCheck = false
     /** @type{number | undefined} */
     this.longPollFallbackMs = opts.longPollFallbackMs
+    /** @type{?ReturnType<typeof setTimeout>} */
     this.fallbackTimer = null
     /** @type{Storage} */
     this.sessionStore = opts.sessionStorage || (global && global.sessionStorage)
+    /** @type{number} */
     this.establishedConnections = 0
+    /** @type{Encode<void>} */
     this.defaultEncoder = Serializer.encode.bind(Serializer)
+    /** @type{Decode<void>} */
     this.defaultDecoder = Serializer.decode.bind(Serializer)
+    /** @type{boolean} */
     this.closeWasClean = false
+    /** @type{boolean} */
     this.disconnecting = false
     /** @type{BinaryType} */
     this.binaryType = opts.binaryType || "arraybuffer"
+    /** @type{number} */
     this.connectClock = 1
+    /** @type{number} */
     this.pageHidden = false
+    /** @type{Encode<void>} */
+    this.encode = undefined;
+    /** @type{Decode<void>} */
+    this.decode = undefined;
     if(this.transport !== LongPoll){
       this.encode = opts.encode || this.defaultEncoder
       this.decode = opts.decode || this.defaultDecoder
@@ -117,15 +136,21 @@ export default class Socket {
     if(!this.logger && opts.debug){
       this.logger = (kind, msg, data) => { console.log(`${kind}: ${msg}`, data) }
     }
+    /** @type{number} */
     this.longpollerTimeout = opts.longpollerTimeout || 20000
     /** @type{() => Params} */
     this.params = closure(opts.params || {})
+    /** @type{string} */
     this.endPoint = `${endPoint}/${TRANSPORTS.websocket}`
     /** @type{Vsn} */
     this.vsn = opts.vsn || DEFAULT_VSN
+    /** @type{?ReturnType<typeof setTimeout>} */
     this.heartbeatTimeoutTimer = null
+    /** @type{?ReturnType<typeof setTimeout>} */
     this.heartbeatTimer = null
+    /** @type{?string} */
     this.pendingHeartbeatRef = null
+    /** @type{Timer} */
     this.reconnectTimer = new Timer(() => {
       if(this.pageHidden){
         this.log("Not reconnecting as page is hidden!")
@@ -134,7 +159,7 @@ export default class Socket {
       }
       this.teardown(() => this.connect())
     }, this.reconnectAfterMs)
-    /** @type{[string]} */
+    /** @type{string | undefined} */
     this.authToken = opts.authToken
   }
 
