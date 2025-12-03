@@ -385,7 +385,7 @@ var Channel = class {
    * channel.off("event")
    *
    * @param {string} event
-   * @param {number} ref
+   * @param {number} [ref]
    */
   off(event, ref) {
     this.bindings = this.bindings.filter((bind) => {

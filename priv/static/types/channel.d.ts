@@ -84,9 +84,9 @@ export default class Channel {
      * channel.off("event")
      *
      * @param {string} event
-     * @param {number} ref
+     * @param {number} [ref]
      */
-    off(event: string, ref: number): void;
+    off(event: string, ref?: number): void;
     /**
      * @private
      */
