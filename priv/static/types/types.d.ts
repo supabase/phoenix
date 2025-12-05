@@ -89,13 +89,7 @@ export type Message<T> = ({
     topic: string;
     payload: T;
 });
-/**
- * SERIALIZER
- */
 export type Encode<T> = (msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T;
-/**
- * SERIALIZER
- */
 export type Decode<T> = (rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T;
 /**
  * SOCKET
@@ -112,7 +106,7 @@ export type OnCloseCallback = (event: CloseEvent) => void;
 /**
  * SOCKET
  */
-export type OnErrorCallback = (error: any, transportBefore: any, establishedBefore: any) => void;
+export type OnErrorCallback = (error: Event, transportBefore: SocketTransport, establishedBefore: number) => void;
 /**
  * SOCKET
  */

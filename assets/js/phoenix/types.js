@@ -9,7 +9,7 @@
 
 /**
  * @template T
- * @typedef {T | () => T} Closure
+ * @typedef {T | (() => T)} Closure
  *
  */
 
@@ -60,10 +60,12 @@
  * topic: string;
  * payload: T;
  * })} Message
- *
+ */
+/**
  * @template T
  * @typedef {(msg: Message<Record<string, any>>, callback: (result: ArrayBuffer | string) => T) => T} Encode
- *
+ */
+/**
  * @template T
  * @typedef {(rawPayload: ArrayBuffer | string, callback: (msg: Message<unknown>) => T) => T} Decode
  */
@@ -73,7 +75,7 @@
  * @typedef {(typeof WebSocket | typeof LongPoll)} SocketTransport
  * @typedef {() => void} OnOpenCallback
  * @typedef {(event: CloseEvent) => void} OnCloseCallback
- * @typedef {(error, transportBefore, establishedBefore) => void} OnErrorCallback
+ * @typedef {(error: Event, transportBefore: SocketTransport, establishedBefore: number) => void} OnErrorCallback
  * @typedef {(rawMessage: Message<unknown>) => void} OnMessageCallback
  * @typedef {({
  *   open: [string, OnOpenCallback][]
