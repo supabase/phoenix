@@ -74,7 +74,7 @@
  * @typedef {() => void} OnOpenCallback
  * @typedef {(event: CloseEvent) => void} OnCloseCallback
  * @typedef {(error, transportBefore, establishedBefore) => void} OnErrorCallback
- * @typedef {(rawMessage: MessageEvent<any>) => void} OnMessageCallback
+ * @typedef {(rawMessage: Message<unknown>) => void} OnMessageCallback
  * @typedef {({
  *   open: [string, OnOpenCallback][]
  *   close: [string, OnCloseCallback][]

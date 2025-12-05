@@ -116,7 +116,7 @@ export type OnErrorCallback = (error: any, transportBefore: any, establishedBefo
 /**
  * SOCKET
  */
-export type OnMessageCallback = (rawMessage: MessageEvent<any>) => void;
+export type OnMessageCallback = (rawMessage: Message<unknown>) => void;
 /**
  * SOCKET
  */
