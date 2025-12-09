@@ -471,7 +471,7 @@ var Phoenix = (() => {
      * Must return the payload, modified or unmodified
      * @param {string} event
      * @param {unknown} payload
-     * @param {number} ref
+     * @param {number} [ref]
      * @returns {unknown}
      */
     onMessage(event, payload, ref) {
@@ -510,6 +510,11 @@ var Phoenix = (() => {
     }
     /**
      * @private
+     *
+     * @param {string} event
+     * @param {unknown} payload
+     * @param {number} [ref]
+     * @param {number} [joinRef]
      */
     trigger(event, payload, ref, joinRef) {
       let handledPayload = this.onMessage(event, payload, ref, joinRef);

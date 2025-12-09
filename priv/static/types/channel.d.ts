@@ -134,10 +134,10 @@ export default class Channel {
      * Must return the payload, modified or unmodified
      * @param {string} event
      * @param {unknown} payload
-     * @param {number} ref
+     * @param {number} [ref]
      * @returns {unknown}
      */
-    onMessage(event: string, payload: unknown, ref: number): unknown;
+    onMessage(event: string, payload: unknown, ref?: number): unknown;
     /**
      * @private
      */
@@ -152,6 +152,11 @@ export default class Channel {
     private rejoin;
     /**
      * @private
+     *
+     * @param {string} event
+     * @param {unknown} payload
+     * @param {number} [ref]
+     * @param {number} [joinRef]
      */
     private trigger;
     /**
