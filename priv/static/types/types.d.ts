@@ -6,7 +6,7 @@ export type Closure<T> = T | (() => T);
 /**
  * CHANNEL
  */
-export type BindingCallback = (payload: unknown, ref?: number, joinRef: number) => void;
+export type BindingCallback = (payload: unknown, ref: number | undefined, joinRef: number) => void;
 /**
  * CHANNEL
  */

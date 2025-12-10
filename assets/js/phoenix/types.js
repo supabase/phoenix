@@ -15,7 +15,7 @@
 
 /**
  * CHANNEL
- * @typedef {(payload: unknown, ref?: number, joinRef: number) => void} BindingCallback
+ * @typedef {(payload: unknown, ref: number | undefined, joinRef: number) => void} BindingCallback
  * @typedef {({event: string, ref: number, callback: BindingCallback})} Binding
  */
 
