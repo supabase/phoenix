@@ -50,32 +50,28 @@ export type XhrState = (typeof XHR_STATES)[keyof typeof XHR_STATES];
 /**
  * PRESENCE
  */
-export type Events = {
+export type PresenceEvents = {
     state: string;
     diff: string;
 };
 /**
  * PRESENCE
  */
-export type OnJoin = (key: string, currentPresence: PresenceState, newPresence: PresenceState) => void;
+export type PresenceOnJoin = (key: string, currentPresence: PresenceState, newPresence: PresenceState) => void;
 /**
  * PRESENCE
  */
-export type OnLeave = (key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void;
+export type PresenceOnLeave = (key: string, currentPresence: PresenceState, leftPresence: PresenceState) => void;
 /**
  * PRESENCE
  */
-export type OnSync = () => void;
+export type PresenceOnSync = () => void;
 /**
  * PRESENCE
  */
-export type State = Record<string, PresenceState>;
-/**
- * PRESENCE
- */
-export type Diff = ({
-    joins: State;
-    leaves: State;
+export type PresenceDiff = ({
+    joins: PresenceState;
+    leaves: PresenceState;
 });
 /**
  * PRESENCE
@@ -106,27 +102,27 @@ export type SocketTransport = (typeof WebSocket | typeof LongPoll);
 /**
  * SOCKET
  */
-export type OnOpenCallback = () => void;
+export type SocketOnOpen = () => void;
 /**
  * SOCKET
  */
-export type OnCloseCallback = (event: CloseEvent) => void;
+export type SocketOnClose = (event: CloseEvent) => void;
 /**
  * SOCKET
  */
-export type OnErrorCallback = (error: Event, transportBefore: SocketTransport, establishedBefore: number) => void;
+export type SocketOnError = (error: Event, transportBefore: SocketTransport, establishedBefore: number) => void;
 /**
  * SOCKET
  */
-export type OnMessageCallback = (rawMessage: Message<unknown>) => void;
+export type SocketOnMessage = (rawMessage: Message<unknown>) => void;
 /**
  * SOCKET
  */
-export type StateChangeCallbacks = ({
-    open: [string, OnOpenCallback][];
-    close: [string, OnCloseCallback][];
-    error: [string, OnErrorCallback][];
-    message: [string, OnMessageCallback][];
+export type SocketStateChangeCallbacks = ({
+    open: [string, SocketOnOpen][];
+    close: [string, SocketOnClose][];
+    error: [string, SocketOnError][];
+    message: [string, SocketOnMessage][];
 });
 /**
  * SOCKET

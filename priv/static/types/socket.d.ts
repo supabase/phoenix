@@ -1,5 +1,5 @@
 /**
-* @import { Encode, Decode, Message, Vsn, SocketTransport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
+* @import { Encode, Decode, Message, Vsn, SocketTransport, Params, SocketOnOpen, SocketOnClose, SocketOnError, SocketOnMessage, SocketOptions, SocketStateChangeCallbacks } from "./types"
 */
 export default class Socket {
     /** Initializes the Socket *
@@ -13,8 +13,8 @@ export default class Socket {
      * @param {SocketOptions} [opts] - Optional configuration
      */
     constructor(endPoint: string, opts?: SocketOptions);
-    /** @type{StateChangeCallbacks} */
-    stateChangeCallbacks: StateChangeCallbacks;
+    /** @type{SocketStateChangeCallbacks} */
+    stateChangeCallbacks: SocketStateChangeCallbacks;
     /** @type{Channel[]} */
     channels: Channel[];
     /** @type{(() => void)[]} */
@@ -139,30 +139,30 @@ export default class Socket {
      *
      * @example socket.onOpen(function(){ console.info("the socket was opened") })
      *
-     * @param {OnOpenCallback} callback
+     * @param {SocketOnOpen} callback
      */
-    onOpen(callback: OnOpenCallback): string;
+    onOpen(callback: SocketOnOpen): string;
     /**
      * Registers callbacks for connection close events
-     * @param {OnCloseCallback} callback
+     * @param {SocketOnClose} callback
      * @returns {string}
      */
-    onClose(callback: OnCloseCallback): string;
+    onClose(callback: SocketOnClose): string;
     /**
      * Registers callbacks for connection error events
      *
      * @example socket.onError(function(error){ alert("An error occurred") })
      *
-     * @param {OnErrorCallback} callback
+     * @param {SocketOnError} callback
      * @returns {string}
      */
-    onError(callback: OnErrorCallback): string;
+    onError(callback: SocketOnError): string;
     /**
      * Registers callbacks for connection message events
-     * @param {OnMessageCallback} callback
+     * @param {SocketOnMessage} callback
      * @returns {string}
      */
-    onMessage(callback: OnMessageCallback): string;
+    onMessage(callback: SocketOnMessage): string;
     /**
      * Pings the server and invokes the callback with the RTT in milliseconds
      * @param {(timeDelta: number) => void} callback
@@ -246,7 +246,7 @@ export default class Socket {
     onConnMessage(rawMessage: MessageEvent<any>): void;
     leaveOpenTopic(topic: any): void;
 }
-import type { StateChangeCallbacks } from "./types";
+import type { SocketStateChangeCallbacks } from "./types";
 import Channel from "./channel";
 import type { SocketTransport } from "./types";
 import type { Encode } from "./types";
@@ -255,10 +255,10 @@ import type { Params } from "./types";
 import type { Vsn } from "./types";
 import Timer from "./timer";
 import LongPoll from "./longpoll";
-import type { OnOpenCallback } from "./types";
-import type { OnCloseCallback } from "./types";
-import type { OnErrorCallback } from "./types";
-import type { OnMessageCallback } from "./types";
+import type { SocketOnOpen } from "./types";
+import type { SocketOnClose } from "./types";
+import type { SocketOnError } from "./types";
+import type { SocketOnMessage } from "./types";
 import type { Message } from "./types";
 import type { SocketOptions } from "./types";
 //# sourceMappingURL=socket.d.ts.map

@@ -834,11 +834,11 @@ var Presence = class _Presence {
   /**
    * Initializes the Presence
    * @param {Channel} channel - The Channel
-   * @param {{events?: Events}} [opts] - The options,
+   * @param {{events?: PresenceEvents}} [opts] - The options,
    *        for example `{events: {state: "state", diff: "diff"}}`
    */
   constructor(channel, opts = {}) {
-    let events = opts.events || /** @type {Events} */
+    let events = opts.events || /** @type {PresenceEvents} */
     { state: "presence_state", diff: "presence_diff" };
     this.state = {};
     this.pendingDiffs = [];
@@ -873,19 +873,19 @@ var Presence = class _Presence {
     });
   }
   /**
-   * @param {OnJoin} callback
+   * @param {PresenceOnJoin} callback
    */
   onJoin(callback) {
     this.caller.onJoin = callback;
   }
   /**
-   * @param {OnLeave} callback
+   * @param {PresenceOnLeave} callback
    */
   onLeave(callback) {
     this.caller.onLeave = callback;
   }
   /**
-   * @param {OnSync} callback
+   * @param {PresenceOnSync} callback
    */
   onSync(callback) {
     this.caller.onSync = callback;
@@ -911,12 +911,12 @@ var Presence = class _Presence {
    * be provided to react to changes in the client's local presences across
    * disconnects and reconnects with the server.
    *
-   * @param {State} currentState
-   * @param {State} newState
-   * @param {OnJoin} onJoin
-   * @param {OnLeave} onLeave
+   * @param {Record<string, PresenceState>} currentState
+   * @param {Record<string, PresenceState>} newState
+   * @param {PresenceOnJoin} onJoin
+   * @param {PresenceOnLeave} onLeave
    *
-   * @returns {State}
+   * @returns {Record<string, PresenceState>}
    */
   static syncState(currentState, newState, onJoin, onLeave) {
     let state = this.clone(currentState);
@@ -955,12 +955,12 @@ var Presence = class _Presence {
    * accepts optional `onJoin` and `onLeave` callbacks to react to a user
    * joining or leaving from a device.
    *
-   * @param {State} state
-   * @param {Diff} diff
-   * @param {OnJoin} onJoin
-   * @param {OnLeave} onLeave
+   * @param {Record<string, PresenceState>} state
+   * @param {PresenceDiff} diff
+   * @param {PresenceOnJoin} onJoin
+   * @param {PresenceOnLeave} onLeave
    *
-   * @returns {State}
+   * @returns {Record<string, PresenceState>}
    */
   static syncDiff(state, diff, onJoin, onLeave) {
     let { joins, leaves } = this.clone(diff);
@@ -1002,7 +1002,7 @@ var Presence = class _Presence {
    * Returns the array of presences, with selected metadata.
    *
    * @template [T=PresenceState]
-   * @param {State} presences
+   * @param {Record<string, PresenceState>} presences
    * @param {((key: string, obj: Presence) => T)} [chooser]
    *
    * @returns {T[]}
@@ -1020,7 +1020,7 @@ var Presence = class _Presence {
   // private
   /**
   * @template T
-  * @param {State} obj
+  * @param {Record<string, PresenceState>} obj
   * @param {(key: string, obj: PresenceState) => T} func
   */
   static map(obj, func) {
@@ -1366,7 +1366,7 @@ var Socket = class {
    *
    * @example socket.onOpen(function(){ console.info("the socket was opened") })
    *
-   * @param {OnOpenCallback} callback
+   * @param {SocketOnOpen} callback
    */
   onOpen(callback) {
     let ref = this.makeRef();
@@ -1375,7 +1375,7 @@ var Socket = class {
   }
   /**
    * Registers callbacks for connection close events
-   * @param {OnCloseCallback} callback
+   * @param {SocketOnClose} callback
    * @returns {string}
    */
   onClose(callback) {
@@ -1388,7 +1388,7 @@ var Socket = class {
    *
    * @example socket.onError(function(error){ alert("An error occurred") })
    *
-   * @param {OnErrorCallback} callback
+   * @param {SocketOnError} callback
    * @returns {string}
    */
   onError(callback) {
@@ -1398,7 +1398,7 @@ var Socket = class {
   }
   /**
    * Registers callbacks for connection message events
-   * @param {OnMessageCallback} callback
+   * @param {SocketOnMessage} callback
    * @returns {string}
    */
   onMessage(callback) {

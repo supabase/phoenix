@@ -21,7 +21,7 @@ import Serializer from "./serializer"
 import Timer from "./timer"
 
 /**
-* @import { Encode, Decode, Message, Vsn, SocketTransport, Params, OnOpenCallback, OnCloseCallback, OnErrorCallback, OnMessageCallback, SocketOptions, StateChangeCallbacks } from "./types"
+* @import { Encode, Decode, Message, Vsn, SocketTransport, Params, SocketOnOpen, SocketOnClose, SocketOnError, SocketOnMessage, SocketOptions, SocketStateChangeCallbacks } from "./types"
 */
 
 export default class Socket {
@@ -36,7 +36,7 @@ export default class Socket {
    * @param {SocketOptions} [opts] - Optional configuration
    */
   constructor(endPoint, opts = {}){
-    /** @type{StateChangeCallbacks} */
+    /** @type{SocketStateChangeCallbacks} */
     this.stateChangeCallbacks = {open: [], close: [], error: [], message: []}
     /** @type{Channel[]} */
     this.channels = []
@@ -265,7 +265,7 @@ export default class Socket {
    *
    * @example socket.onOpen(function(){ console.info("the socket was opened") })
    *
-   * @param {OnOpenCallback} callback
+   * @param {SocketOnOpen} callback
    */
   onOpen(callback){
     let ref = this.makeRef()
@@ -275,7 +275,7 @@ export default class Socket {
 
   /**
    * Registers callbacks for connection close events
-   * @param {OnCloseCallback} callback
+   * @param {SocketOnClose} callback
    * @returns {string}
    */
   onClose(callback){
@@ -289,7 +289,7 @@ export default class Socket {
    *
    * @example socket.onError(function(error){ alert("An error occurred") })
    *
-   * @param {OnErrorCallback} callback
+   * @param {SocketOnError} callback
    * @returns {string}
    */
   onError(callback){
@@ -300,7 +300,7 @@ export default class Socket {
 
   /**
    * Registers callbacks for connection message events
-   * @param {OnMessageCallback} callback
+   * @param {SocketOnMessage} callback
    * @returns {string}
    */
   onMessage(callback){
