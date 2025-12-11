@@ -334,14 +334,14 @@ var Phoenix = (() => {
     }
     /**
      * Hook into channel close
-     * @param {BindingCallback} callback
+     * @param {ChannelBindingCallback} callback
      */
     onClose(callback) {
       this.on(CHANNEL_EVENTS.close, callback);
     }
     /**
      * Hook into channel errors
-     * @param {(reason: unknown) => void} callback
+     * @param {ChannelOnErrorCallback} callback
      * @return {number}
      */
     onError(callback) {
@@ -361,7 +361,7 @@ var Phoenix = (() => {
      * // while do_other_stuff will keep firing on the "event"
      *
      * @param {string} event
-     * @param {BindingCallback} callback
+     * @param {ChannelBindingCallback} callback
      * @returns {number} ref
      */
     on(event, callback) {
@@ -469,10 +469,7 @@ var Phoenix = (() => {
      * before dispatching to the channel callbacks.
      *
      * Must return the payload, modified or unmodified
-     * @param {string} event
-     * @param {unknown} payload
-     * @param {number} [ref]
-     * @returns {unknown}
+     * @type{ChannelOnMessage}
      */
     onMessage(event, payload, ref) {
       return payload;
