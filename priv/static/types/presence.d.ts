@@ -1,6 +1,6 @@
 /**
  * @import Channel from "./channel"
- * @import { PresenceEvents, PresenceOnJoin, PresenceOnLeave, PresenceOnSync, PresenceState, PresenceDiff  } from "./types"
+ * @import { PresenceEvents, PresenceOnJoin, PresenceOnLeave, PresenceOnSync, PresenceState, PresenceDiff, PresenceOptions } from "./types"
  */
 export default class Presence {
     /**
@@ -57,12 +57,9 @@ export default class Presence {
     /**
      * Initializes the Presence
      * @param {Channel} channel - The Channel
-     * @param {{events?: PresenceEvents}} [opts] - The options,
-     *        for example `{events: {state: "state", diff: "diff"}}`
+     * @param {PresenceOptions} [opts] - The options, for example `{events: {state: "state", diff: "diff"}}`
      */
-    constructor(channel: Channel, opts?: {
-        events?: PresenceEvents;
-    });
+    constructor(channel: Channel, opts?: PresenceOptions);
     /** @type{Record<string, PresenceState>} */
     state: Record<string, PresenceState>;
     /** @type{PresenceDiff[]} */
@@ -106,5 +103,5 @@ import type Channel from "./channel";
 import type { PresenceOnJoin } from "./types";
 import type { PresenceOnLeave } from "./types";
 import type { PresenceOnSync } from "./types";
-import type { PresenceEvents } from "./types";
+import type { PresenceOptions } from "./types";
 //# sourceMappingURL=presence.d.ts.map

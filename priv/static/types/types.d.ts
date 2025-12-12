@@ -84,6 +84,12 @@ export type PresenceState = ({
     }[];
 });
 /**
+ * PRESENCE
+ */
+export type PresenceOptions = {
+    events?: PresenceEvents | undefined;
+};
+/**
  * SERIALIZER
  */
 export type Message<T> = ({

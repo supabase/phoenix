@@ -49,6 +49,9 @@
  *    }[]
  *  }
  *)} PresenceState
+ *
+ * @typedef {Object} PresenceOptions
+ * @property {PresenceEvents} [events]
  */
 
 /**

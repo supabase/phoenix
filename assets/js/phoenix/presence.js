@@ -1,14 +1,13 @@
 /**
  * @import Channel from "./channel"
- * @import { PresenceEvents, PresenceOnJoin, PresenceOnLeave, PresenceOnSync, PresenceState, PresenceDiff  } from "./types"
+ * @import { PresenceEvents, PresenceOnJoin, PresenceOnLeave, PresenceOnSync, PresenceState, PresenceDiff, PresenceOptions } from "./types"
  */
 export default class Presence {
 
   /**
    * Initializes the Presence
    * @param {Channel} channel - The Channel
-   * @param {{events?: PresenceEvents}} [opts] - The options,
-   *        for example `{events: {state: "state", diff: "diff"}}`
+   * @param {PresenceOptions} [opts] - The options, for example `{events: {state: "state", diff: "diff"}}`
    */
   constructor(channel, opts = {}){
     let events = opts.events || /** @type {PresenceEvents} */ ({state: "presence_state", diff: "presence_diff"})

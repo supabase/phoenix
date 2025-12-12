@@ -834,8 +834,7 @@ var Presence = class _Presence {
   /**
    * Initializes the Presence
    * @param {Channel} channel - The Channel
-   * @param {{events?: PresenceEvents}} [opts] - The options,
-   *        for example `{events: {state: "state", diff: "diff"}}`
+   * @param {PresenceOptions} [opts] - The options, for example `{events: {state: "state", diff: "diff"}}`
    */
   constructor(channel, opts = {}) {
     let events = opts.events || /** @type {PresenceEvents} */
