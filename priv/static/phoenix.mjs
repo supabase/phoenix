@@ -193,7 +193,7 @@ var Timer = class {
   constructor(callback, timerCalc) {
     this.callback = callback;
     this.timerCalc = timerCalc;
-    this.timer = null;
+    this.timer = void 0;
     this.tries = 0;
   }
   reset() {
