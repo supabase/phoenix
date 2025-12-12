@@ -1042,8 +1042,8 @@ var Phoenix = (() => {
     KINDS: { push: 0, reply: 1, broadcast: 2 },
     /**
     * @template T
-    * @param {ArrayBuffer | string} msg
-    * @param {(msg: Message<unknown>) => T} callback
+    * @param {Message<Record<string, any>>} msg
+    * @param {(msg: ArrayBuffer | string) => T} callback
     * @returns {T}
     */
     encode(msg, callback) {
@@ -1056,8 +1056,8 @@ var Phoenix = (() => {
     },
     /**
     * @template T
-    * @param {Message<Record<string, any>>} rawPayload
-    * @param {(msg: ArrayBuffer | string) => T} callback
+    * @param {ArrayBuffer | string} rawPayload
+    * @param {(msg: Message<unknown>) => T} callback
     * @returns {T}
     */
     decode(rawPayload, callback) {
@@ -1089,7 +1089,9 @@ var Phoenix = (() => {
       combined.set(new Uint8Array(payload), header.byteLength);
       return combined.buffer;
     },
-    /** @private */
+    /**
+    * @private
+    */
     binaryDecode(buffer) {
       let view = new DataView(buffer);
       let kind = view.getUint8(0);
