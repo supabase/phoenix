@@ -22,7 +22,7 @@ export type ChannelBinding = ({
 /**
  * CHANNEL
  */
-export type ChannelOnMessage = (event: string, payload: unknown, ref?: number) => unknown;
+export type ChannelOnMessage = (event: string, payload?: unknown, ref?: number, joinRef?: number) => unknown;
 /**
  * CONSTANTS
  */

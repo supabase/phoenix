@@ -474,9 +474,6 @@ var Channel = class {
   onMessage(event, payload, ref) {
     return payload;
   }
-  /**
-   * @private
-   */
   isMember(topic, event, payload, joinRef) {
     if (this.topic !== topic) {
       return false;
@@ -488,11 +485,11 @@ var Channel = class {
       return true;
     }
   }
-  /**
-   * @private
-   */
   joinRef() {
-    return this.joinPush.ref;
+    return (
+      /** @type{number} */
+      this.joinPush.ref
+    );
   }
   /**
    * @private
@@ -506,10 +503,8 @@ var Channel = class {
     this.joinPush.resend(timeout);
   }
   /**
-   * @private
-   *
    * @param {string} event
-   * @param {unknown} payload
+   * @param {unknown} [payload]
    * @param {number} [ref]
    * @param {number} [joinRef]
    */
@@ -524,39 +519,21 @@ var Channel = class {
       bind.callback(handledPayload, ref, joinRef || this.joinRef());
     }
   }
-  /**
-   * @private
-   */
   replyEventName(ref) {
     return `chan_reply_${ref}`;
   }
-  /**
-   * @private
-   */
   isClosed() {
     return this.state === CHANNEL_STATES.closed;
   }
-  /**
-   * @private
-   */
   isErrored() {
     return this.state === CHANNEL_STATES.errored;
   }
-  /**
-   * @private
-   */
   isJoined() {
     return this.state === CHANNEL_STATES.joined;
   }
-  /**
-   * @private
-   */
   isJoining() {
     return this.state === CHANNEL_STATES.joining;
   }
-  /**
-   * @private
-   */
   isLeaving() {
     return this.state === CHANNEL_STATES.leaving;
   }

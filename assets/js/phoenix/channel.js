@@ -249,9 +249,6 @@ export default class Channel {
    */
   onMessage(event, payload, ref){ return payload }
 
-  /**
-   * @private
-   */
   isMember(topic, event, payload, joinRef){
     if(this.topic !== topic){ return false }
 
@@ -263,10 +260,7 @@ export default class Channel {
     }
   }
 
-  /**
-   * @private
-   */
-  joinRef(){ return this.joinPush.ref }
+  joinRef(){ return /** @type{number} */ (this.joinPush.ref) }
 
   /**
    * @private
@@ -279,10 +273,8 @@ export default class Channel {
   }
 
   /**
-   * @private
-   *
    * @param {string} event
-   * @param {unknown} payload
+   * @param {unknown} [payload]
    * @param {number} [ref]
    * @param {number} [joinRef]
    */
@@ -298,33 +290,15 @@ export default class Channel {
     }
   }
 
-  /**
-   * @private
-   */
   replyEventName(ref){ return `chan_reply_${ref}` }
 
-  /**
-   * @private
-   */
   isClosed(){ return this.state === CHANNEL_STATES.closed }
 
-  /**
-   * @private
-   */
   isErrored(){ return this.state === CHANNEL_STATES.errored }
 
-  /**
-   * @private
-   */
   isJoined(){ return this.state === CHANNEL_STATES.joined }
 
-  /**
-   * @private
-   */
   isJoining(){ return this.state === CHANNEL_STATES.joining }
 
-  /**
-   * @private
-   */
   isLeaving(){ return this.state === CHANNEL_STATES.leaving }
 }

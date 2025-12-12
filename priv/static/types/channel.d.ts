@@ -125,52 +125,26 @@ export default class Channel {
      * @returns {Push}
      */
     leave(timeout?: number): Push;
-    onMessage(event: string, payload: unknown, ref?: number): unknown;
-    /**
-     * @private
-     */
-    private isMember;
-    /**
-     * @private
-     */
-    private joinRef;
+    onMessage(event: string, payload?: unknown, ref?: number, joinRef?: number): unknown;
+    isMember(topic: any, event: any, payload: any, joinRef: any): boolean;
+    joinRef(): number;
     /**
      * @private
      */
     private rejoin;
     /**
-     * @private
-     *
      * @param {string} event
-     * @param {unknown} payload
+     * @param {unknown} [payload]
      * @param {number} [ref]
      * @param {number} [joinRef]
      */
-    private trigger;
-    /**
-     * @private
-     */
-    private replyEventName;
-    /**
-     * @private
-     */
-    private isClosed;
-    /**
-     * @private
-     */
-    private isErrored;
-    /**
-     * @private
-     */
-    private isJoined;
-    /**
-     * @private
-     */
-    private isJoining;
-    /**
-     * @private
-     */
-    private isLeaving;
+    trigger(event: string, payload?: unknown, ref?: number, joinRef?: number): void;
+    replyEventName(ref: any): string;
+    isClosed(): boolean;
+    isErrored(): boolean;
+    isJoined(): boolean;
+    isJoining(): boolean;
+    isLeaving(): boolean;
 }
 import type { ChannelState } from "./types";
 import type { Params } from "./types";
