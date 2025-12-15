@@ -125,9 +125,9 @@ export default class Channel {
      * @returns {Push}
      */
     leave(timeout?: number): Push;
-    onMessage(event: string, payload?: unknown, ref?: number, joinRef?: number): unknown;
+    onMessage(event: string, payload?: unknown, ref?: string | null, joinRef?: string | null): unknown;
     isMember(topic: any, event: any, payload: any, joinRef: any): boolean;
-    joinRef(): number;
+    joinRef(): string;
     /**
      * @private
      */
@@ -135,10 +135,10 @@ export default class Channel {
     /**
      * @param {string} event
      * @param {unknown} [payload]
-     * @param {number} [ref]
-     * @param {number} [joinRef]
+     * @param {?string} [ref]
+     * @param {?string} [joinRef]
      */
-    trigger(event: string, payload?: unknown, ref?: number, joinRef?: number): void;
+    trigger(event: string, payload?: unknown, ref?: string | null, joinRef?: string | null): void;
     replyEventName(ref: any): string;
     isClosed(): boolean;
     isErrored(): boolean;

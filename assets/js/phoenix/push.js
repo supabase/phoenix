@@ -26,7 +26,7 @@ export default class Push {
     this.recHooks = []
     /** @type{boolean} */
     this.sent = false
-    /** @type{number | undefined} */
+    /** @type{string | null | undefined} */
     this.ref = undefined
   }
 

@@ -260,7 +260,7 @@ export default class Channel {
     }
   }
 
-  joinRef(){ return /** @type{number} */ (this.joinPush.ref) }
+  joinRef(){ return /** @type{string} */ (this.joinPush.ref) }
 
   /**
    * @private
@@ -275,8 +275,8 @@ export default class Channel {
   /**
    * @param {string} event
    * @param {unknown} [payload]
-   * @param {number} [ref]
-   * @param {number} [joinRef]
+   * @param {?string} [ref]
+   * @param {?string} [joinRef]
    */
   trigger(event, payload, ref, joinRef){
     let handledPayload = this.onMessage(event, payload, ref, joinRef)

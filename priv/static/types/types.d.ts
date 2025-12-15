@@ -6,7 +6,7 @@ export type Closure<T> = T | (() => T);
 /**
  * CHANNEL
  */
-export type ChannelBindingCallback = (payload: unknown, ref: number | undefined, joinRef: number) => void;
+export type ChannelBindingCallback = (payload: unknown, ref: string | null | undefined, joinRef: string) => void;
 /**
  * CHANNEL
  */
@@ -22,7 +22,7 @@ export type ChannelBinding = ({
 /**
  * CHANNEL
  */
-export type ChannelOnMessage = (event: string, payload?: unknown, ref?: number, joinRef?: number) => unknown;
+export type ChannelOnMessage = (event: string, payload?: unknown, ref?: string | null, joinRef?: string | null) => unknown;
 /**
  * CONSTANTS
  */

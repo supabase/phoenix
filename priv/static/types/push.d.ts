@@ -29,8 +29,8 @@ export default class Push {
     }[];
     /** @type{boolean} */
     sent: boolean;
-    /** @type{number | undefined} */
-    ref: number | undefined;
+    /** @type{string | null | undefined} */
+    ref: string | null | undefined;
     /**
      *
      * @param {number} timeout

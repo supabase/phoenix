@@ -15,10 +15,10 @@
 
 /**
  * CHANNEL
- * @typedef {(payload: unknown, ref: number | undefined, joinRef: number) => void} ChannelBindingCallback
+ * @typedef {(payload: unknown, ref: string | null | undefined, joinRef: string) => void} ChannelBindingCallback
  * @typedef {(reason: unknown) => void} ChannelOnErrorCallback
  * @typedef {({event: string, ref: number, callback: ChannelBindingCallback})} ChannelBinding
- * @typedef {(event: string, payload?: unknown, ref?: number, joinRef?: number) => unknown} ChannelOnMessage
+ * @typedef {(event: string, payload?: unknown, ref?: ?string, joinRef?: ?string) => unknown} ChannelOnMessage
  */
 
 

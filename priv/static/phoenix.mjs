@@ -445,7 +445,7 @@ var Channel = class {
   }
   joinRef() {
     return (
-      /** @type{number} */
+      /** @type{string} */
       this.joinPush.ref
     );
   }
@@ -463,8 +463,8 @@ var Channel = class {
   /**
    * @param {string} event
    * @param {unknown} [payload]
-   * @param {number} [ref]
-   * @param {number} [joinRef]
+   * @param {?string} [ref]
+   * @param {?string} [joinRef]
    */
   trigger(event, payload, ref, joinRef) {
     let handledPayload = this.onMessage(event, payload, ref, joinRef);
