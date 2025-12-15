@@ -149,9 +149,6 @@ var Phoenix = (() => {
       this.recHooks.push({ status, callback });
       return this;
     }
-    /**
-     * @private
-     */
     reset() {
       this.cancelRefEvent();
       this.ref = null;
@@ -174,16 +171,10 @@ var Phoenix = (() => {
       }
       this.channel.off(this.refEvent);
     }
-    /**
-     * @private
-     */
     cancelTimeout() {
       clearTimeout(this.timeoutTimer);
       this.timeoutTimer = null;
     }
-    /**
-     * @private
-     */
     startTimeout() {
       if (this.timeoutTimer) {
         this.cancelTimeout();
@@ -206,9 +197,6 @@ var Phoenix = (() => {
     hasReceived(status) {
       return this.receivedResp && this.receivedResp.status === status;
     }
-    /**
-     * @private
-     */
     trigger(status, response) {
       this.channel.trigger(this.refEvent, { status, response });
     }
