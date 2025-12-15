@@ -37,11 +37,11 @@ export default class Presence {
      *
      * @template [T=PresenceState]
      * @param {Record<string, PresenceState>} presences
-     * @param {((key: string, obj: Presence) => T)} [chooser]
+     * @param {((key: string, obj: PresenceState) => T)} [chooser]
      *
      * @returns {T[]}
      */
-    static list<T = PresenceState>(presences: Record<string, PresenceState>, chooser?: ((key: string, obj: Presence) => T)): T[];
+    static list<T = PresenceState>(presences: Record<string, PresenceState>, chooser?: ((key: string, obj: PresenceState) => T)): T[];
     /**
     * @template T
     * @param {Record<string, PresenceState>} obj

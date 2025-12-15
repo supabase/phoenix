@@ -176,7 +176,7 @@ export default class Presence {
    *
    * @template [T=PresenceState]
    * @param {Record<string, PresenceState>} presences
-   * @param {((key: string, obj: Presence) => T)} [chooser]
+   * @param {((key: string, obj: PresenceState) => T)} [chooser]
    *
    * @returns {T[]}
    */
