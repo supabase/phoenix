@@ -290,6 +290,9 @@ export default class Channel {
     }
   }
 
+  /**
+  * @param {string} ref
+  */
   replyEventName(ref){ return `chan_reply_${ref}` }
 
   isClosed(){ return this.state === CHANNEL_STATES.closed }

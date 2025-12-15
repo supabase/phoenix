@@ -139,7 +139,10 @@ export default class Channel {
      * @param {?string} [joinRef]
      */
     trigger(event: string, payload?: unknown, ref?: string | null, joinRef?: string | null): void;
-    replyEventName(ref: any): string;
+    /**
+    * @param {string} ref
+    */
+    replyEventName(ref: string): string;
     isClosed(): boolean;
     isErrored(): boolean;
     isJoined(): boolean;

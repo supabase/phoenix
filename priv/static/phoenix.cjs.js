@@ -507,6 +507,9 @@ var Channel = class {
       bind.callback(handledPayload, ref, joinRef || this.joinRef());
     }
   }
+  /**
+  * @param {string} ref
+  */
   replyEventName(ref) {
     return `chan_reply_${ref}`;
   }
