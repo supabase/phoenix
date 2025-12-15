@@ -50,13 +50,13 @@ export default class Socket {
     this.timeout = opts.timeout || DEFAULT_TIMEOUT
     /** @type{SocketTransport} */
     this.transport = opts.transport || global.WebSocket || LongPoll
-    /** @type{InstanceType<SocketTransport> | undefined} */
+    /** @type{InstanceType<SocketTransport> | undefined | null} */
     this.conn = undefined;
     /** @type{boolean} */
     this.primaryPassedHealthCheck = false
     /** @type{number | undefined} */
     this.longPollFallbackMs = opts.longPollFallbackMs
-    /** @type{?ReturnType<typeof setTimeout>} */
+    /** @type{ReturnType<typeof setTimeout>} */
     this.fallbackTimer = null
     /** @type{Storage} */
     this.sessionStore = opts.sessionStorage || (global && global.sessionStorage)
@@ -74,7 +74,7 @@ export default class Socket {
     this.binaryType = opts.binaryType || "arraybuffer"
     /** @type{number} */
     this.connectClock = 1
-    /** @type{number} */
+    /** @type{boolean} */
     this.pageHidden = false
     /** @type{Encode<void>} */
     this.encode = undefined;
@@ -87,6 +87,7 @@ export default class Socket {
       this.encode = this.defaultEncoder
       this.decode = this.defaultDecoder
     }
+    /** @type{number | null} */
     let awaitingConnectionOnPageShow = null
     if(phxWindow && phxWindow.addEventListener){
       phxWindow.addEventListener("pagehide", _e => {
@@ -131,7 +132,7 @@ export default class Socket {
         return [10, 50, 100, 150, 200, 250, 500, 1000, 2000][tries - 1] || 5000
       }
     }
-    /** @type{(kind: string, msg: string, data: any) => void} */
+    /** @type{((kind: string, msg: string, data: any) => void) | null} */
     this.logger = opts.logger || null
     if(!this.logger && opts.debug){
       this.logger = (kind, msg, data) => { console.log(`${kind}: ${msg}`, data) }
@@ -144,9 +145,9 @@ export default class Socket {
     this.endPoint = `${endPoint}/${TRANSPORTS.websocket}`
     /** @type{Vsn} */
     this.vsn = opts.vsn || DEFAULT_VSN
-    /** @type{?ReturnType<typeof setTimeout>} */
+    /** @type{ReturnType<typeof setTimeout>} */
     this.heartbeatTimeoutTimer = null
-    /** @type{?ReturnType<typeof setTimeout>} */
+    /** @type{ReturnType<typeof setTimeout>} */
     this.heartbeatTimer = null
     /** @type{?string} */
     this.pendingHeartbeatRef = null
@@ -212,7 +213,7 @@ export default class Socket {
    *
    * See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent#Status_codes for valid status codes.
    *
-   * @param {() => void} callback - Optional callback which is called after socket is disconnected.
+   * @param {() => void} [callback] - Optional callback which is called after socket is disconnected.
    * @param {number} [code] - A status code for disconnection (Optional).
    * @param {string} [reason] - A textual description of the reason to disconnect. (Optional)
    */
@@ -546,9 +547,8 @@ export default class Socket {
   isConnected(){ return this.connectionState() === "open" }
 
   /**
-   * @private
    *
-   * @param {Channel}
+   * @param {Channel} channel
    */
   remove(channel){
     this.off(channel.stateChangeRefs)
@@ -573,7 +573,7 @@ export default class Socket {
    * Initiates a new channel for the given topic
    *
    * @param {string} topic
-   * @param {Params | () => Params} [chanParams]- Parameters for the channel
+   * @param {Params | (() => Params)} [chanParams]- Parameters for the channel
    * @returns {Channel}
    */
   channel(topic, chanParams = {}){

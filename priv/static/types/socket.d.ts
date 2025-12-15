@@ -27,14 +27,14 @@ export default class Socket {
     timeout: number;
     /** @type{SocketTransport} */
     transport: SocketTransport;
-    /** @type{InstanceType<SocketTransport> | undefined} */
-    conn: InstanceType<SocketTransport> | undefined;
+    /** @type{InstanceType<SocketTransport> | undefined | null} */
+    conn: InstanceType<SocketTransport> | undefined | null;
     /** @type{boolean} */
     primaryPassedHealthCheck: boolean;
     /** @type{number | undefined} */
     longPollFallbackMs: number | undefined;
-    /** @type{?ReturnType<typeof setTimeout>} */
-    fallbackTimer: ReturnType<typeof setTimeout> | null;
+    /** @type{ReturnType<typeof setTimeout>} */
+    fallbackTimer: ReturnType<typeof setTimeout>;
     /** @type{Storage} */
     sessionStore: Storage;
     /** @type{number} */
@@ -51,8 +51,8 @@ export default class Socket {
     binaryType: BinaryType;
     /** @type{number} */
     connectClock: number;
-    /** @type{number} */
-    pageHidden: number;
+    /** @type{boolean} */
+    pageHidden: boolean;
     /** @type{Encode<void>} */
     encode: Encode<void>;
     /** @type{Decode<void>} */
@@ -63,8 +63,8 @@ export default class Socket {
     rejoinAfterMs: (tries: number) => number;
     /** @type{(tries: number) => number} */
     reconnectAfterMs: (tries: number) => number;
-    /** @type{(kind: string, msg: string, data: any) => void} */
-    logger: (kind: string, msg: string, data: any) => void;
+    /** @type{((kind: string, msg: string, data: any) => void) | null} */
+    logger: ((kind: string, msg: string, data: any) => void) | null;
     /** @type{number} */
     longpollerTimeout: number;
     /** @type{() => Params} */
@@ -73,10 +73,10 @@ export default class Socket {
     endPoint: string;
     /** @type{Vsn} */
     vsn: Vsn;
-    /** @type{?ReturnType<typeof setTimeout>} */
-    heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null;
-    /** @type{?ReturnType<typeof setTimeout>} */
-    heartbeatTimer: ReturnType<typeof setTimeout> | null;
+    /** @type{ReturnType<typeof setTimeout>} */
+    heartbeatTimeoutTimer: ReturnType<typeof setTimeout>;
+    /** @type{ReturnType<typeof setTimeout>} */
+    heartbeatTimer: ReturnType<typeof setTimeout>;
     /** @type{?string} */
     pendingHeartbeatRef: string | null;
     /** @type{Timer} */
@@ -111,11 +111,11 @@ export default class Socket {
      *
      * See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent#Status_codes for valid status codes.
      *
-     * @param {() => void} callback - Optional callback which is called after socket is disconnected.
+     * @param {() => void} [callback] - Optional callback which is called after socket is disconnected.
      * @param {number} [code] - A status code for disconnection (Optional).
      * @param {string} [reason] - A textual description of the reason to disconnect. (Optional)
      */
-    disconnect(callback: () => void, code?: number, reason?: string): void;
+    disconnect(callback?: () => void, code?: number, reason?: string): void;
     /**
      * @param {Params} [params] - [DEPRECATED] The params to send when connecting, for example `{user_id: userToken}`
      *
@@ -209,11 +209,10 @@ export default class Socket {
      */
     isConnected(): boolean;
     /**
-     * @private
      *
-     * @param {Channel}
+     * @param {Channel} channel
      */
-    private remove;
+    remove(channel: Channel): void;
     /**
      * Removes `onOpen`, `onClose`, `onError,` and `onMessage` registrations.
      *
@@ -225,7 +224,7 @@ export default class Socket {
      * Initiates a new channel for the given topic
      *
      * @param {string} topic
-     * @param {Params | () => Params} [chanParams]- Parameters for the channel
+     * @param {Params | (() => Params)} [chanParams]- Parameters for the channel
      * @returns {Channel}
      */
     channel(topic: string, chanParams?: Params | (() => Params)): Channel;

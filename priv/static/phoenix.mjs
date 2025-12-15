@@ -1259,7 +1259,7 @@ var Socket = class {
    *
    * See https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent#Status_codes for valid status codes.
    *
-   * @param {() => void} callback - Optional callback which is called after socket is disconnected.
+   * @param {() => void} [callback] - Optional callback which is called after socket is disconnected.
    * @param {number} [code] - A status code for disconnection (Optional).
    * @param {string} [reason] - A textual description of the reason to disconnect. (Optional)
    */
@@ -1594,9 +1594,8 @@ var Socket = class {
     return this.connectionState() === "open";
   }
   /**
-   * @private
    *
-   * @param {Channel}
+   * @param {Channel} channel
    */
   remove(channel) {
     this.off(channel.stateChangeRefs);
@@ -1619,7 +1618,7 @@ var Socket = class {
    * Initiates a new channel for the given topic
    *
    * @param {string} topic
-   * @param {Params | () => Params} [chanParams]- Parameters for the channel
+   * @param {Params | (() => Params)} [chanParams]- Parameters for the channel
    * @returns {Channel}
    */
   channel(topic, chanParams = {}) {
