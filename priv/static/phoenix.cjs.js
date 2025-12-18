@@ -464,6 +464,16 @@ var Channel = class {
   onMessage(event, payload, ref) {
     return payload;
   }
+  /**
+   * Overridable filter hook
+   *
+   * If this function returns `true`, `binding`'s callback will be called.
+   *
+   * @type{ChannelFilterBindings}
+   */
+  filterBindings(binding, payload, ref) {
+    return true;
+  }
   isMember(topic, event, payload, joinRef) {
     if (this.topic !== topic) {
       return false;
@@ -503,7 +513,7 @@ var Channel = class {
     if (payload && !handledPayload) {
       throw new Error("channel onMessage callbacks must return the payload, modified or unmodified");
     }
-    let eventBindings = this.bindings.filter((bind) => bind.event === event);
+    let eventBindings = this.bindings.filter((bind) => bind.event === event && this.filterBindings(bind, payload, ref));
     for (let i = 0; i < eventBindings.length; i++) {
       let bind = eventBindings[i];
       bind.callback(handledPayload, ref, joinRef || this.joinRef());

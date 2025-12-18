@@ -24,6 +24,10 @@ export type ChannelBinding = ({
  */
 export type ChannelOnMessage = (event: string, payload?: unknown, ref?: string | null, joinRef?: string | null) => unknown;
 /**
+ * CHANNEL
+ */
+export type ChannelFilterBindings = (binding: ChannelBinding, payload: unknown, ref?: string | null) => boolean;
+/**
  * CONSTANTS
  */
 export type Vsn = "1.0.0" | "2.0.0";

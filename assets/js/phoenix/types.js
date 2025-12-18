@@ -19,6 +19,7 @@
  * @typedef {(reason: unknown) => void} ChannelOnErrorCallback
  * @typedef {({event: string, ref: number, callback: ChannelBindingCallback})} ChannelBinding
  * @typedef {(event: string, payload?: unknown, ref?: ?string, joinRef?: ?string) => unknown} ChannelOnMessage
+ * @typedef {(binding: ChannelBinding, payload: unknown, ref?: ?string) => boolean} ChannelFilterBindings
  */
 
 
