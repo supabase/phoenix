@@ -24,8 +24,10 @@ var Phoenix = (() => {
     Channel: () => Channel,
     LongPoll: () => LongPoll,
     Presence: () => Presence,
+    Push: () => Push,
     Serializer: () => serializer_default,
-    Socket: () => Socket
+    Socket: () => Socket,
+    Timer: () => Timer
   });
 
   // js/phoenix/utils.js

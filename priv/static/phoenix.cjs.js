@@ -23,8 +23,10 @@ __export(phoenix_exports, {
   Channel: () => Channel,
   LongPoll: () => LongPoll,
   Presence: () => Presence,
+  Push: () => Push,
   Serializer: () => serializer_default,
-  Socket: () => Socket
+  Socket: () => Socket,
+  Timer: () => Timer
 });
 module.exports = __toCommonJS(phoenix_exports);
 
