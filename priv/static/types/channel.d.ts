@@ -1,6 +1,6 @@
 /**
 * @import Socket from "./socket"
-* @import { ChannelState, Params, ChannelBindingCallback, ChannelOnMessage, ChannelOnErrorCallback, ChannelBinding } from "./types"
+* @import { ChannelState, Params, ChannelBindingCallback, ChannelOnMessage, ChannelFilterBindings, ChannelOnErrorCallback, ChannelBinding } from "./types"
 */
 export default class Channel {
     /**
@@ -126,6 +126,7 @@ export default class Channel {
      */
     leave(timeout?: number): Push;
     onMessage(event: string, payload?: unknown, ref?: string | null, joinRef?: string | null): unknown;
+    filterBindings(binding: ChannelBinding, payload: unknown, ref?: string | null): boolean;
     isMember(topic: any, event: any, payload: any, joinRef: any): boolean;
     joinRef(): string;
     /**

@@ -65,7 +65,7 @@ describe("with transport", function (){
     it("sets subprotocols when authToken is provided", function (){
       const authToken = "1234"
       const socket = new Socket("/socket", {authToken})
-      
+
       socket.connect()
       expect(socket.conn.protocols).toEqual(["phoenix", "base64url.bearer.phx.MTIzNA"])
     })
@@ -725,6 +725,44 @@ describe("with transport", function (){
 
       expect(payload).toEqual({one: "two"})
     })
+  })
+
+  describe("filterBindings", () => {
+    it("does not filter any bindings by default", () => {
+      socket = new Socket("/socket");
+      channel = socket.channel("topic")
+      const spy = jest.fn();
+      channel.on("foo", spy);
+      channel.trigger("foo");
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it("filters bindings", () => {
+      socket = new Socket("/socket");
+      channel = socket.channel("topic")
+      const spy = jest.fn();
+      channel.on("foo", spy);
+      channel.filterBindings = () => false;
+      channel.trigger("foo");
+      expect(spy).toHaveBeenCalledTimes(0);
+    });
+
+    it("filers only specified bindings", () => {
+      socket = new Socket("/socket");
+      channel = socket.channel("topic")
+
+      const spy1 = jest.fn();
+      channel.on("foo", spy1);
+
+      const spy2 = jest.fn();
+      const spy2Ref = channel.on("foo", spy2);
+      channel.filterBindings = (binding) => binding.ref != spy2Ref;
+
+      channel.trigger("foo")
+
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(0);
+    });
   })
 
   describe("canPush", function (){
