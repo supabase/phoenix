@@ -12,7 +12,7 @@ describe("with transports", function (){
     const mockSend = jest.fn()
     const mockAbort = jest.fn()
     const mockSetRequestHeader = jest.fn()
-    
+
     global.XMLHttpRequest = jest.fn(() => ({
       open: mockOpen,
       send: mockSend,
@@ -568,11 +568,11 @@ describe("with transports", function (){
       socket.connect()
     })
 
-    it("does not schedule reconnectTimer if normal close", function (){
+    it("schedules reconnectTimer if normal close", function (){
       const scheduleSpy = jest.spyOn(socket.reconnectTimer, "scheduleTimeout")
       const event = {code: 1000}
       socket.onConnClose(event)
-      expect(scheduleSpy).not.toHaveBeenCalled()
+      expect(scheduleSpy).toHaveBeenCalled()
     })
 
     it("schedules reconnectTimer timeout if abnormal close", function (){

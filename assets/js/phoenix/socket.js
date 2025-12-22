@@ -496,11 +496,10 @@ export default class Socket {
   */
   onConnClose(event){
     if(this.conn) this.conn.onclose = () => {} // noop to prevent recursive calls in teardown
-    let closeCode = event && event.code
     if(this.hasLogger()) this.log("transport", "close", event)
     this.triggerChanError()
     this.clearHeartbeats()
-    if(!this.closeWasClean && closeCode !== 1000){
+    if(!this.closeWasClean){
       this.reconnectTimer.scheduleTimeout()
     }
     this.stateChangeCallbacks.close.forEach(([, callback]) => callback(event))
