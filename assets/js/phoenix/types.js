@@ -168,5 +168,10 @@
  *       setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
  *     }
  *
+ * @property {boolean} [autoSendHeartbeat] - Whether to automatically send heartbeats after
+ * connection is established.
+ *
+ * Defaults to true.
+ *
  */
 export {}

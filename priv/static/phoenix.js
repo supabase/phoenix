@@ -1146,6 +1146,7 @@ var Phoenix = (() => {
      * @param {SocketOptions} [opts] - Optional configuration
      */
     constructor(endPoint, opts = {}) {
+      var _a;
       this.stateChangeCallbacks = { open: [], close: [], error: [], message: [] };
       this.channels = [];
       this.sendBuffer = [];
@@ -1237,6 +1238,7 @@ var Phoenix = (() => {
         this.teardown(() => this.connect());
       }, this.reconnectAfterMs);
       this.authToken = opts.authToken;
+      this.autoSendHeartbeat = (_a = opts.autoSendHeartbeat) != null ? _a : true;
     }
     /**
      * Returns the LongPoll transport reference
@@ -1487,7 +1489,9 @@ var Phoenix = (() => {
       this.establishedConnections++;
       this.flushSendBuffer();
       this.reconnectTimer.reset();
-      this.resetHeartbeat();
+      if (this.autoSendHeartbeat) {
+        this.resetHeartbeat();
+      }
       this.stateChangeCallbacks.open.forEach(([, callback]) => callback());
     }
     /**
@@ -1709,7 +1713,9 @@ var Phoenix = (() => {
         if (ref && ref === this.pendingHeartbeatRef) {
           this.clearHeartbeats();
           this.pendingHeartbeatRef = null;
-          this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+          if (this.autoSendHeartbeat) {
+            this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+          }
         }
         if (this.hasLogger()) this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref && "(" + ref + ")" || ""}`, payload);
         for (let i = 0; i < this.channels.length; i++) {

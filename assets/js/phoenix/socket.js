@@ -162,6 +162,8 @@ export default class Socket {
     }, this.reconnectAfterMs)
     /** @type{string | undefined} */
     this.authToken = opts.authToken
+    /** @type{boolean} */
+    this.autoSendHeartbeat = opts.autoSendHeartbeat ?? true
   }
 
   /**
@@ -413,7 +415,9 @@ export default class Socket {
     this.establishedConnections++
     this.flushSendBuffer()
     this.reconnectTimer.reset()
-    this.resetHeartbeat()
+    if (this.autoSendHeartbeat) {
+      this.resetHeartbeat()
+    }
     this.stateChangeCallbacks.open.forEach(([, callback]) => callback())
   }
 
@@ -632,7 +636,9 @@ export default class Socket {
       if(ref && ref === this.pendingHeartbeatRef){
         this.clearHeartbeats()
         this.pendingHeartbeatRef = null
-        this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs)
+        if (this.autoSendHeartbeat) {
+          this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs)
+        }
       }
 
       if(this.hasLogger()) this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref && "(" + ref + ")" || ""}`, payload)

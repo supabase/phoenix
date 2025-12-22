@@ -83,6 +83,8 @@ export default class Socket {
     reconnectTimer: Timer;
     /** @type{string | undefined} */
     authToken: string | undefined;
+    /** @type{boolean} */
+    autoSendHeartbeat: boolean;
     /**
      * Returns the LongPoll transport reference
      */

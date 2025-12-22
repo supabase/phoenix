@@ -247,6 +247,13 @@ export type SocketOptions = {
      * }
      */
     sessionStorage?: Storage | undefined;
+    /**
+     * - Whether to automatically send heartbeats after
+     * connection is established.
+     *
+     * Defaults to true.
+     */
+    autoSendHeartbeat?: boolean | undefined;
 };
 import type { SOCKET_STATES } from "./constants";
 import type { CHANNEL_STATES } from "./constants";

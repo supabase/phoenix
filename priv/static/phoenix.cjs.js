@@ -1237,6 +1237,7 @@ var Socket = class {
       this.teardown(() => this.connect());
     }, this.reconnectAfterMs);
     this.authToken = opts.authToken;
+    this.autoSendHeartbeat = opts.autoSendHeartbeat ?? true;
   }
   /**
    * Returns the LongPoll transport reference
@@ -1487,7 +1488,9 @@ var Socket = class {
     this.establishedConnections++;
     this.flushSendBuffer();
     this.reconnectTimer.reset();
-    this.resetHeartbeat();
+    if (this.autoSendHeartbeat) {
+      this.resetHeartbeat();
+    }
     this.stateChangeCallbacks.open.forEach(([, callback]) => callback());
   }
   /**
@@ -1709,7 +1712,9 @@ var Socket = class {
       if (ref && ref === this.pendingHeartbeatRef) {
         this.clearHeartbeats();
         this.pendingHeartbeatRef = null;
-        this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+        if (this.autoSendHeartbeat) {
+          this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
+        }
       }
       if (this.hasLogger()) this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref && "(" + ref + ")" || ""}`, payload);
       for (let i = 0; i < this.channels.length; i++) {
