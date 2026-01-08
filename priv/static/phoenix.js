@@ -17,6 +17,26 @@ var Phoenix = (() => {
     return to;
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var __async = (__this, __arguments, generator) => {
+    return new Promise((resolve, reject) => {
+      var fulfilled = (value) => {
+        try {
+          step(generator.next(value));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      var rejected = (value) => {
+        try {
+          step(generator.throw(value));
+        } catch (e) {
+          reject(e);
+        }
+      };
+      var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);
+      step((generator = generator.apply(__this, __arguments)).next());
+    });
+  };
 
   // js/phoenix/index.js
   var phoenix_exports = {};
@@ -1232,14 +1252,15 @@ var Phoenix = (() => {
       this.heartbeatTimeoutTimer = null;
       this.heartbeatTimer = null;
       this.pendingHeartbeatRef = null;
-      this.reconnectTimer = new Timer(() => {
+      this.reconnectTimer = new Timer(() => __async(this, null, function* () {
         if (this.pageHidden) {
           this.log("Not reconnecting as page is hidden!");
           this.teardown();
           return;
         }
+        if (opts.beforeReconnect) yield opts.beforeReconnect();
         this.teardown(() => this.connect());
-      }, this.reconnectAfterMs);
+      }), this.reconnectAfterMs);
       this.authToken = opts.authToken;
     }
     /**

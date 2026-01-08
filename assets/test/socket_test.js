@@ -948,6 +948,19 @@ describe("with transports", function (){
     })
   })
 
+  describe("beforeReconnect", () => {
+    test("is called", () => {
+      const spy = jest.fn();
+      socket = new Socket("/socket", {
+        beforeReconnect: spy
+      })
+
+      expect(spy).not.toHaveBeenCalled()
+      socket.reconnectTimer.callback()
+      expect(spy).toHaveBeenCalled()
+    })
+  })
+
   describe("ping", function (){
     beforeEach(function (){
       socket = new Socket("/socket")

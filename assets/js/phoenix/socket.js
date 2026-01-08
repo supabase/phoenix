@@ -156,12 +156,13 @@ export default class Socket {
     /** @type{?string} */
     this.pendingHeartbeatRef = null
     /** @type{Timer} */
-    this.reconnectTimer = new Timer(() => {
+    this.reconnectTimer = new Timer(async () => {
       if(this.pageHidden){
         this.log("Not reconnecting as page is hidden!")
         this.teardown()
         return
       }
+      if (opts.beforeReconnect) await opts.beforeReconnect();
       this.teardown(() => this.connect())
     }, this.reconnectAfterMs)
     /** @type{string | undefined} */

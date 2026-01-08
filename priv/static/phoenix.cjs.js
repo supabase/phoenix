@@ -1231,12 +1231,13 @@ var Socket = class {
     this.heartbeatTimeoutTimer = null;
     this.heartbeatTimer = null;
     this.pendingHeartbeatRef = null;
-    this.reconnectTimer = new Timer(() => {
+    this.reconnectTimer = new Timer(async () => {
       if (this.pageHidden) {
         this.log("Not reconnecting as page is hidden!");
         this.teardown();
         return;
       }
+      if (opts.beforeReconnect) await opts.beforeReconnect();
       this.teardown(() => this.connect());
     }, this.reconnectAfterMs);
     this.authToken = opts.authToken;

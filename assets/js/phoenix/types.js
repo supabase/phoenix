@@ -118,6 +118,11 @@
  *
  * @property {number} [heartbeatIntervalMs] - The millisec interval to send a heartbeat message
  *
+ * @property {boolean} [autoSendHeartbeat] - Whether to automatically send heartbeats after
+ * connection is established.
+ *
+ * Defaults to true.
+ *
  * @property {HeartbeatCallback} [heartbeatCallback] - The optional function called after heartbeat status change.
  *
  * @property {(tries: number) => number} [reconnectAfterMs] - The optional function that returns the
@@ -173,10 +178,7 @@
  *       setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
  *     }
  *
- * @property {boolean} [autoSendHeartbeat] - Whether to automatically send heartbeats after
- * connection is established.
- *
- * Defaults to true.
+ * @property {Promise<void>} [beforeReconnect] - Callback ran before socket tries to reconnect.
  *
  */
 export {}

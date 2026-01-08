@@ -187,6 +187,13 @@ export type SocketOptions = {
      */
     heartbeatIntervalMs?: number | undefined;
     /**
+     * - Whether to automatically send heartbeats after
+     * connection is established.
+     *
+     * Defaults to true.
+     */
+    autoSendHeartbeat?: boolean | undefined;
+    /**
      * - The optional function called after heartbeat status change.
      */
     heartbeatCallback?: HeartbeatCallback | undefined;
@@ -260,12 +267,9 @@ export type SocketOptions = {
      */
     sessionStorage?: Storage | undefined;
     /**
-     * - Whether to automatically send heartbeats after
-     * connection is established.
-     *
-     * Defaults to true.
+     * - Callback ran before socket tries to reconnect.
      */
-    autoSendHeartbeat?: boolean | undefined;
+    beforeReconnect?: Promise<void> | undefined;
 };
 import type { SOCKET_STATES } from "./constants";
 import type { CHANNEL_STATES } from "./constants";
