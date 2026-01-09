@@ -477,6 +477,34 @@ describe("with transports", function (){
       socket.sendHeartbeat()
       expect(sendSpy).not.toHaveBeenCalledWith(data)
     })
+
+    it('handles heartbeat timeout and triggers reconnection', (done) => {
+      jest.useFakeTimers()
+      socket.conn.readyState = 1 // open
+
+      const timeoutSpy = jest.spyOn(socket, "heartbeatTimeout")
+      const heartbeatCallbackSpy = jest.spyOn(socket, 'heartbeatCallback');
+      const logSpy = jest.fn();
+      const closeSpy = jest.fn();
+
+      socket.conn.close = closeSpy;
+      socket.logger = logSpy;
+
+      socket.sendHeartbeat();
+      jest.advanceTimersByTime(30010)
+      expect(timeoutSpy).toHaveBeenCalled()
+      expect(closeSpy).toHaveBeenCalledWith(1000, 'heartbeat timeout')
+      expect(logSpy).toHaveBeenCalledWith(
+        'transport',
+        'heartbeat timeout. Attempting to re-establish connection',
+        undefined
+      )
+      expect(heartbeatCallbackSpy).toHaveBeenCalledWith('timeout')
+      expect(socket.pendingHeartbeatRef).toBe(null)
+
+      jest.useRealTimers()
+      done()
+    })
   })
 
   describe("heartbeatCallback", () => {
