@@ -897,6 +897,21 @@ describe("with transports", function (){
       expect(otherSpy).toHaveBeenCalledTimes(0)
     })
 
+    it.each([
+      "ok",
+      "error"
+    ])("triggers onHeartbeat with %s", (msg) => {
+      const spy = jest.fn();
+      socket.onHeartbeat(spy);
+
+      const data = encode({ref: "3", event: "phx_reply", payload: {status: msg, response: {}}, topic: "phoenix"})
+
+      socket.pendingHeartbeatRef = "3"
+      socket.onConnMessage({data})
+
+      expect(spy).toHaveBeenCalledWith(msg, undefined)
+    });
+
     it("triggers onMessage callback", function (){
       const message = {"topic": "topic", "event": "event", "payload": "payload", "ref": "ref"}
       const spy = jest.fn()
