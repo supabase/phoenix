@@ -58,7 +58,7 @@ export default class Channel {
       this.pushBuffer.forEach(pushEvent => pushEvent.send())
       this.pushBuffer = []
     })
-    this.joinPush.receive("error", () => {
+    this.joinPush.receive("error", (reason) => {
       this.state = CHANNEL_STATES.errored
       if(this.socket.hasLogger()) this.socket.log("channel", `error ${this.topic}`, reason)
       if(this.socket.isConnected()){ this.rejoinTimer.scheduleTimeout() }

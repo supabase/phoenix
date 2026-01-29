@@ -271,7 +271,7 @@ var Channel = class {
       this.pushBuffer.forEach((pushEvent) => pushEvent.send());
       this.pushBuffer = [];
     });
-    this.joinPush.receive("error", () => {
+    this.joinPush.receive("error", (reason) => {
       this.state = CHANNEL_STATES.errored;
       if (this.socket.hasLogger()) this.socket.log("channel", `error ${this.topic}`, reason);
       if (this.socket.isConnected()) {
@@ -284,8 +284,8 @@ var Channel = class {
       this.state = CHANNEL_STATES.closed;
       this.socket.remove(this);
     });
-    this.onError((reason2) => {
-      if (this.socket.hasLogger()) this.socket.log("channel", `error ${this.topic}`, reason2);
+    this.onError((reason) => {
+      if (this.socket.hasLogger()) this.socket.log("channel", `error ${this.topic}`, reason);
       if (this.isJoining()) {
         this.joinPush.reset();
       }
@@ -336,7 +336,7 @@ var Channel = class {
    * @return {number}
    */
   onError(callback) {
-    return this.on(CHANNEL_EVENTS.error, (reason2) => callback(reason2));
+    return this.on(CHANNEL_EVENTS.error, (reason) => callback(reason));
   }
   /**
    * Subscribes on channel events
@@ -690,8 +690,8 @@ var LongPoll = class {
   endpointURL() {
     return Ajax.appendParams(this.pollEndpoint, { token: this.token });
   }
-  closeAndRetry(code, reason2, wasClean) {
-    this.close(code, reason2, wasClean);
+  closeAndRetry(code, reason, wasClean) {
+    this.close(code, reason, wasClean);
     this.readyState = SOCKET_STATES.connecting;
   }
   ontimeout() {
@@ -779,12 +779,12 @@ var LongPoll = class {
       }
     });
   }
-  close(code, reason2, wasClean) {
+  close(code, reason, wasClean) {
     for (let req of this.reqs) {
       req.abort();
     }
     this.readyState = SOCKET_STATES.closed;
-    let opts = Object.assign({ code: 1e3, reason: void 0, wasClean: true }, { code, reason: reason2, wasClean });
+    let opts = Object.assign({ code: 1e3, reason: void 0, wasClean: true }, { code, reason, wasClean });
     this.batchBuffer = [];
     clearTimeout(this.currentBatchTimer);
     this.currentBatchTimer = null;
@@ -1302,7 +1302,7 @@ var Socket = class {
    * @param {number} [code] - A status code for disconnection (Optional).
    * @param {string} [reason] - A textual description of the reason to disconnect. (Optional)
    */
-  disconnect(callback, code, reason2) {
+  disconnect(callback, code, reason) {
     this.connectClock++;
     this.disconnecting = true;
     this.closeWasClean = true;
@@ -1311,7 +1311,7 @@ var Socket = class {
     this.teardown(() => {
       this.disconnecting = false;
       callback && callback();
-    }, code, reason2);
+    }, code, reason);
   }
   /**
    * @param {Params} [params] - [DEPRECATED] The params to send when connecting, for example `{user_id: userToken}`
@@ -1451,8 +1451,8 @@ var Socket = class {
     let established = false;
     let primaryTransport = true;
     let openRef, errorRef;
-    let fallback = (reason2) => {
-      this.log("transport", `falling back to ${fallbackTransport.name}...`, reason2);
+    let fallback = (reason) => {
+      this.log("transport", `falling back to ${fallbackTransport.name}...`, reason);
       this.off([openRef, errorRef]);
       primaryTransport = false;
       this.replaceTransport(fallbackTransport);
@@ -1462,11 +1462,11 @@ var Socket = class {
       return fallback("memorized");
     }
     this.fallbackTimer = setTimeout(fallback, fallbackThreshold);
-    errorRef = this.onError((reason2) => {
-      this.log("transport", "error", reason2);
+    errorRef = this.onError((reason) => {
+      this.log("transport", "error", reason);
       if (primaryTransport && !established) {
         clearTimeout(this.fallbackTimer);
-        fallback(reason2);
+        fallback(reason);
       }
     });
     if (this.fallbackRef) {
@@ -1534,7 +1534,7 @@ var Socket = class {
     this.clearHeartbeats();
     this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
   }
-  teardown(callback, code, reason2) {
+  teardown(callback, code, reason) {
     if (!this.conn) {
       return callback && callback();
     }
@@ -1545,7 +1545,7 @@ var Socket = class {
       }
       if (this.conn) {
         if (code) {
-          this.conn.close(code, reason2 || "");
+          this.conn.close(code, reason || "");
         } else {
           this.conn.close();
         }
