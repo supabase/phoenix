@@ -1054,6 +1054,16 @@ describe("with transport", function (){
       expect(channel.state).toBe("closed")
     })
 
+    it("cleans up leavePush on 'ok' event", function (){
+      expect(channel.state).not.toBe("closed")
+
+      const leavePush = channel.leave().trigger("ok", {})
+
+      expect(channel.state).toBe("closed")
+
+      expect(leavePush)()
+    })
+
     // TODO - the following tests are skipped until Channel.leave
     // behavior can be fixed; currently, 'ok' is triggered immediately
     // within Channel.leave so timeout callbacks are never reached
