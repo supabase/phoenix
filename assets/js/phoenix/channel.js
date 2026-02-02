@@ -270,7 +270,7 @@ export default class Channel {
     }
   }
 
-  joinRef(){ return /** @type{string} */ (this.joinPush.ref) }
+  joinRef(){ return this.joinPush.ref }
 
   /**
    * @private

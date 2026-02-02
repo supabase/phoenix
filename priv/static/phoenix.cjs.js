@@ -487,10 +487,7 @@ var Channel = class {
     }
   }
   joinRef() {
-    return (
-      /** @type{string} */
-      this.joinPush.ref
-    );
+    return this.joinPush.ref;
   }
   /**
    * @private

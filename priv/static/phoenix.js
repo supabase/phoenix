@@ -507,10 +507,7 @@ var Phoenix = (() => {
       }
     }
     joinRef() {
-      return (
-        /** @type{string} */
-        this.joinPush.ref
-      );
+      return this.joinPush.ref;
     }
     /**
      * @private

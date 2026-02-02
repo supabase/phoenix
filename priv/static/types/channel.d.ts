@@ -128,7 +128,7 @@ export default class Channel {
     onMessage(event: string, payload?: unknown, ref?: string | null, joinRef?: string | null): unknown;
     filterBindings(binding: ChannelBinding, payload: unknown, ref?: string | null): boolean;
     isMember(topic: any, event: any, payload: any, joinRef: any): boolean;
-    joinRef(): string;
+    joinRef(): string | null | undefined;
     /**
      * @private
      */
