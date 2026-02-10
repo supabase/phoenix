@@ -164,8 +164,11 @@ export default class Socket {
         this.teardown()
         return
       }
-      if(opts.beforeReconnect) await opts.beforeReconnect()
-      this.teardown(() => this.connect())
+      
+      this.teardown(async () => {
+        if(opts.beforeReconnect) await opts.beforeReconnect()
+        this.connect()
+      })
     }, this.reconnectAfterMs)
     /** @type{string | undefined} */
     this.authToken = opts.authToken
@@ -423,7 +426,7 @@ export default class Socket {
   }
 
   onConnOpen(){
-    if(this.hasLogger()) this.log("transport", `${this.transport.name} connected to ${this.endPointURL()}`)
+    if(this.hasLogger()) this.log("transport", `connected to ${this.endPointURL()}`)
     this.closeWasClean = false
     this.disconnecting = false
     this.establishedConnections++
@@ -639,7 +642,10 @@ export default class Socket {
       }
       return
     }
-    if(this.pendingHeartbeatRef){ return }
+    if(this.pendingHeartbeatRef){ 
+      this.heartbeatTimeout() 
+      return
+    }
     this.pendingHeartbeatRef = this.makeRef()
     this.heartbeatSentAt = Date.now()
     this.push({topic: "phoenix", event: "heartbeat", payload: {}, ref: this.pendingHeartbeatRef})

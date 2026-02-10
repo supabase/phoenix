@@ -1253,8 +1253,10 @@ var Socket = class {
         this.teardown();
         return;
       }
-      if (opts.beforeReconnect) await opts.beforeReconnect();
-      this.teardown(() => this.connect());
+      this.teardown(async () => {
+        if (opts.beforeReconnect) await opts.beforeReconnect();
+        this.connect();
+      });
     }, this.reconnectAfterMs);
     this.authToken = opts.authToken;
   }
@@ -1509,7 +1511,7 @@ var Socket = class {
     clearTimeout(this.heartbeatTimeoutTimer);
   }
   onConnOpen() {
-    if (this.hasLogger()) this.log("transport", `${this.transport.name} connected to ${this.endPointURL()}`);
+    if (this.hasLogger()) this.log("transport", `connected to ${this.endPointURL()}`);
     this.closeWasClean = false;
     this.disconnecting = false;
     this.establishedConnections++;
@@ -1729,6 +1731,7 @@ var Socket = class {
       return;
     }
     if (this.pendingHeartbeatRef) {
+      this.heartbeatTimeout();
       return;
     }
     this.pendingHeartbeatRef = this.makeRef();

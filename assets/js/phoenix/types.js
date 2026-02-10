@@ -178,7 +178,7 @@
  *       setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
  *     }
  *
- * @property {Promise<void>} [beforeReconnect] - Callback ran before socket tries to reconnect.
+ * @property {() => Promise<void>} [beforeReconnect] - Callback ran before socket tries to reconnect.
  *
  */
 export {}

@@ -1274,8 +1274,10 @@ var Phoenix = (() => {
           this.teardown();
           return;
         }
-        if (opts.beforeReconnect) yield opts.beforeReconnect();
-        this.teardown(() => this.connect());
+        this.teardown(() => __async(this, null, function* () {
+          if (opts.beforeReconnect) yield opts.beforeReconnect();
+          this.connect();
+        }));
       }), this.reconnectAfterMs);
       this.authToken = opts.authToken;
     }
@@ -1530,7 +1532,7 @@ var Phoenix = (() => {
       clearTimeout(this.heartbeatTimeoutTimer);
     }
     onConnOpen() {
-      if (this.hasLogger()) this.log("transport", `${this.transport.name} connected to ${this.endPointURL()}`);
+      if (this.hasLogger()) this.log("transport", `connected to ${this.endPointURL()}`);
       this.closeWasClean = false;
       this.disconnecting = false;
       this.establishedConnections++;
@@ -1750,6 +1752,7 @@ var Phoenix = (() => {
         return;
       }
       if (this.pendingHeartbeatRef) {
+        this.heartbeatTimeout();
         return;
       }
       this.pendingHeartbeatRef = this.makeRef();

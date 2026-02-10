@@ -269,7 +269,7 @@ export type SocketOptions = {
     /**
      * - Callback ran before socket tries to reconnect.
      */
-    beforeReconnect?: Promise<void> | undefined;
+    beforeReconnect?: (() => Promise<void>) | undefined;
 };
 import type { SOCKET_STATES } from "./constants";
 import type { CHANNEL_STATES } from "./constants";
