@@ -126,6 +126,10 @@ var Push = class {
     this.receivedResp = null;
     this.sent = false;
   }
+  destroy() {
+    this.cancelRefEvent();
+    this.cancelTimeout();
+  }
   /**
    * @private
    */
@@ -290,6 +294,19 @@ var Channel = class {
       this.rejoin();
       return this.joinPush;
     }
+  }
+  /**
+   * Teardown the channel.
+   *
+   * Destroys and stops related timers.
+   */
+  teardown() {
+    this.pushBuffer.forEach((push) => push.destroy());
+    this.pushBuffer = [];
+    this.rejoinTimer.reset();
+    this.joinPush.destroy();
+    this.state = CHANNEL_STATES.closed;
+    this.bindings = {};
   }
   /**
    * Hook into channel close

@@ -40,6 +40,12 @@ export default class Channel {
      */
     join(timeout?: number): Push;
     /**
+     * Teardown the channel.
+     *
+     * Destroys and stops related timers.
+     */
+    teardown(): void;
+    /**
      * Hook into channel close
      * @param {ChannelBindingCallback} callback
      */
