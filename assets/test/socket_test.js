@@ -640,6 +640,60 @@ describe("with transports", function (){
     })
   })
 
+  describe("leaveOpenTopic", () => {
+    beforeEach(() => {
+      socket = new Socket("/socket")
+      socket.connect()
+    })
+
+    it("should leave duplicate open topic", () => {
+      const topic = "topic"
+      const channel = socket.channel(topic)
+
+      jest.spyOn(channel, "isJoined").mockReturnValue(true)
+      const leaveSpy = jest.spyOn(channel, "leave")
+      const logSpy = jest.fn()
+      socket.logger = logSpy
+
+      socket.leaveOpenTopic(topic)
+
+      expect(logSpy).toHaveBeenCalledWith("transport", `leaving duplicate topic "${topic}"`, undefined)
+      expect(leaveSpy).toHaveBeenCalled()
+    })
+
+    it("should leave duplicate joining topic", () => {
+      const topic = "topic"
+      const channel = socket.channel(topic)
+
+      jest.spyOn(channel, "isJoined").mockReturnValue(false)
+      jest.spyOn(channel, "isJoining").mockReturnValue(true)
+      const leaveSpy = jest.spyOn(channel, "leave")
+      const logSpy = jest.fn()
+      socket.logger = logSpy
+
+      socket.leaveOpenTopic(topic)
+
+      expect(logSpy).toHaveBeenCalledWith("transport", `leaving duplicate topic "${topic}"`, undefined)
+      expect(leaveSpy).toHaveBeenCalled()
+    })
+
+    it("should not leave topic that is not joined or joining", () => {
+      const topic = "topic"
+      const channel = socket.channel(topic)
+
+      jest.spyOn(channel, "isJoined").mockReturnValue(false)
+      jest.spyOn(channel, "isJoining").mockReturnValue(false)
+      const leaveSpy = jest.spyOn(channel, "leave")
+      const logSpy = jest.fn()
+      socket.logger = logSpy
+
+      socket.leaveOpenTopic(topic)
+
+      expect(logSpy).not.toHaveBeenCalled()
+      expect(leaveSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe("flushSendBuffer", function (){
     beforeEach(function (){
       socket = new Socket("/socket")
