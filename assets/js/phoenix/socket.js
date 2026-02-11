@@ -164,7 +164,7 @@ export default class Socket {
         this.teardown()
         return
       }
-      
+
       this.teardown(async () => {
         if(opts.beforeReconnect) await opts.beforeReconnect()
         this.connect()
@@ -642,8 +642,8 @@ export default class Socket {
       }
       return
     }
-    if(this.pendingHeartbeatRef){ 
-      this.heartbeatTimeout() 
+    if(this.pendingHeartbeatRef){
+      this.heartbeatTimeout()
       return
     }
     this.pendingHeartbeatRef = this.makeRef()

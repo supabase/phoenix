@@ -262,7 +262,7 @@ export default class Channel {
    * Must return the payload, modified or unmodified
    * @type{ChannelOnMessage}
    */
-  onMessage(event, payload, ref){ return payload }
+  onMessage(_event, payload, _ref){ return payload }
 
   /**
    * Overridable filter hook
@@ -271,7 +271,7 @@ export default class Channel {
    *
    * @type{ChannelFilterBindings}
    */
-  filterBindings(binding, payload, ref){ return true }
+  filterBindings(_binding, _payload, _ref){ return true }
 
   isMember(topic, event, payload, joinRef){
     if(this.topic !== topic){ return false }
