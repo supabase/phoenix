@@ -499,7 +499,7 @@ var Phoenix = (() => {
      * Must return the payload, modified or unmodified
      * @type{ChannelOnMessage}
      */
-    onMessage(event, payload, ref) {
+    onMessage(_event, payload, _ref) {
       return payload;
     }
     /**
@@ -509,7 +509,7 @@ var Phoenix = (() => {
      *
      * @type{ChannelFilterBindings}
      */
-    filterBindings(binding, payload, ref) {
+    filterBindings(_binding, _payload, _ref) {
       return true;
     }
     isMember(topic, event, payload, joinRef) {
@@ -1268,7 +1268,7 @@ var Phoenix = (() => {
       this.heartbeatTimer = null;
       this.heartbeatSentAt = null;
       this.pendingHeartbeatRef = null;
-      this.reconnectTimer = new Timer(() => __async(this, null, function* () {
+      this.reconnectTimer = new Timer(() => {
         if (this.pageHidden) {
           this.log("Not reconnecting as page is hidden!");
           this.teardown();
@@ -1278,7 +1278,7 @@ var Phoenix = (() => {
           if (opts.beforeReconnect) yield opts.beforeReconnect();
           this.connect();
         }));
-      }), this.reconnectAfterMs);
+      }, this.reconnectAfterMs);
       this.authToken = opts.authToken;
     }
     /**
