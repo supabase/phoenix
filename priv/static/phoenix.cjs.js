@@ -1209,7 +1209,7 @@ var Socket = class {
           this.pageHidden = true;
         } else {
           this.pageHidden = false;
-          if (!this.isConnected()) {
+          if (!this.isConnected() && !this.closeWasClean) {
             this.teardown(() => this.connect());
           }
         }
@@ -1440,6 +1440,19 @@ var Socket = class {
   }
   /**
    * @private
+   *
+   * @param {Function}
+   */
+  transportName(transport) {
+    switch (transport) {
+      case LongPoll:
+        return "LongPoll";
+      default:
+        return transport.name;
+    }
+  }
+  /**
+   * @private
    */
   transportConnect() {
     this.connectClock++;
@@ -1467,14 +1480,15 @@ var Socket = class {
     let established = false;
     let primaryTransport = true;
     let openRef, errorRef;
+    let fallbackTransportName = this.transportName(fallbackTransport);
     let fallback = (reason) => {
-      this.log("transport", `falling back to ${fallbackTransport.name}...`, reason);
+      this.log("transport", `falling back to ${fallbackTransportName}...`, reason);
       this.off([openRef, errorRef]);
       primaryTransport = false;
       this.replaceTransport(fallbackTransport);
       this.transportConnect();
     };
-    if (this.getSession(`phx:fallback:${fallbackTransport.name}`)) {
+    if (this.getSession(`phx:fallback:${fallbackTransportName}`)) {
       return fallback("memorized");
     }
     this.fallbackTimer = setTimeout(fallback, fallbackThreshold);
@@ -1491,10 +1505,11 @@ var Socket = class {
     this.fallbackRef = this.onOpen(() => {
       established = true;
       if (!primaryTransport) {
+        let fallbackTransportName2 = this.transportName(fallbackTransport);
         if (!this.primaryPassedHealthCheck) {
-          this.storeSession(`phx:fallback:${fallbackTransport.name}`, "true");
+          this.storeSession(`phx:fallback:${fallbackTransportName2}`, "true");
         }
-        return this.log("transport", `established ${fallbackTransport.name} fallback`);
+        return this.log("transport", `established ${fallbackTransportName2} fallback`);
       }
       clearTimeout(this.fallbackTimer);
       this.fallbackTimer = setTimeout(fallback, fallbackThreshold);

@@ -184,6 +184,12 @@ export default class Socket {
     ping(callback: (timeDelta: number) => void): boolean;
     /**
      * @private
+     *
+     * @param {Function}
+     */
+    private transportName;
+    /**
+     * @private
      */
     private transportConnect;
     getSession(key: any): string | null;
