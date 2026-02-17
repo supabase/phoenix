@@ -6,7 +6,20 @@
 
 > Peace of mind from prototype to production.
 
-[![Build Status](https://github.com/phoenixframework/phoenix/workflows/CI/badge.svg)](https://github.com/phoenixframework/phoenix/actions/workflows/ci.yml) [![Hex.pm](https://img.shields.io/hexpm/v/phoenix.svg)](https://hex.pm/packages/phoenix) [![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/phoenix)
+[![Build Status](https://github.com/supabase/phoenix/workflows/CI/badge.svg)](https://github.com/supabase/phoenix/actions/workflows/ci.yml) [![npm version](https://img.shields.io/npm/v/@supabase/phoenix.svg)](https://www.npmjs.com/package/@supabase/phoenix)
+
+## Supabase Fork
+
+This is a Supabase fork of Phoenix Framework, published to npm as `@supabase/phoenix`.
+
+**Installation:**
+```bash
+npm install @supabase/phoenix
+```
+
+**Releases**: This fork uses automated releases via [release-please](https://github.com/googleapis/release-please). See [RELEASE.md](RELEASE.md) for details.
+
+**Upstream**: Based on [phoenixframework/phoenix](https://github.com/phoenixframework/phoenix)
 
 ## Getting started
 

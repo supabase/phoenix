@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/phoenixframework/phoenix.git"
+    "url": "git://github.com/supabase/phoenix.git"
   },
   "author": "Chris McCord <chris@chrismccord.com> (https://www.phoenixframework.org)",
   "files": [
