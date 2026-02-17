@@ -4,6 +4,42 @@
 
 **This fork (`supabase/phoenix`) uses automated releases** via [release-please](https://github.com/googleapis/release-please) and npm trusted publishing.
 
+### Versioning Strategy
+
+This fork uses **independent semantic versioning** based on JavaScript API changes only.
+
+- Versions are NOT coupled to Phoenix framework releases
+- Version bumps reflect actual JS API changes (breaking/feature/fix)
+- We regularly merge upstream Phoenix changes and version based on their JS impact
+
+### Upstream Merge Workflow
+
+When merging changes from [phoenixframework/phoenix](https://github.com/phoenixframework/phoenix):
+
+1. **Merge upstream changes**:
+   ```bash
+   git remote add upstream https://github.com/phoenixframework/phoenix.git
+   git fetch upstream
+   git merge upstream/main
+   # Or cherry-pick specific commits
+   ```
+
+2. **Evaluate JS impact**: Review changes in `assets/js/phoenix/`
+   - Ignore Elixir-only changes
+   - Focus on JavaScript API changes
+
+3. **Commit with conventional commit**:
+   - Breaking JS change: `feat!: merge upstream Phoenix X.Y.Z with breaking changes`
+   - New JS feature: `feat: merge upstream Phoenix X.Y.Z with new features`
+   - Bug fix only: `fix: merge upstream Phoenix X.Y.Z bug fixes`
+
+4. **release-please will version appropriately** based on commit type:
+   - `feat!:` → Major bump (0.x → 1.0, 1.x → 2.0)
+   - `feat:` → Minor bump (0.1 → 0.2)
+   - `fix:` → Patch bump (0.1.0 → 0.1.1)
+
+5. **Update README** with new upstream Phoenix version and sync date
+
 ### How It Works
 
 1. **Make changes** using [Conventional Commits](https://www.conventionalcommits.org/)

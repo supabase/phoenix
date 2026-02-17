@@ -21,6 +21,17 @@ npm install @supabase/phoenix
 
 **Upstream**: Based on [phoenixframework/phoenix](https://github.com/phoenixframework/phoenix)
 
+## Versioning
+
+This package uses **independent semantic versioning** for the JavaScript client.
+
+- **Current version**: 0.1.0
+- **Based on**: Phoenix Framework 1.8.3 JS client
+- **Last synced**: 2026-02-17
+
+We version based on **JS API changes only**, not upstream Phoenix framework releases.
+When we merge upstream Phoenix changes, we evaluate the JS API impact and version accordingly.
+
 ## Getting started
 
 See the official site at <https://www.phoenixframework.org/>.
