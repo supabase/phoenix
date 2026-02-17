@@ -29,6 +29,20 @@ This release introduces deprecation warnings for several features that have been
 
   * The `config` variable is no longer available in `Phoenix.Endpoint`. In the past, it was possible to read your endpoint configuration at compile-time via an injected variable named `config`, which is no longer supported. Use `Application.compile_env/3` instead, which is tracked by the Elixir compiler and lead to a better developer experience. This may also lead to errors on application boot if you were previously incorrectly setting compile time config at runtime.
 
+## [0.2.0](https://github.com/supabase/phoenix/compare/phoenix-v0.1.0...phoenix-v0.2.0) (2026-02-17)
+
+
+### Features
+
+* custom dispatcher for Presence handle_diff broadcast ([#6500](https://github.com/supabase/phoenix/issues/6500)) ([3a09787](https://github.com/supabase/phoenix/commit/3a09787a1d81e79f8f07f94255815b47b8c9826e))
+* Update JSDoc & generate .d.ts files ([#3](https://github.com/supabase/phoenix/issues/3)) ([9dc0fa7](https://github.com/supabase/phoenix/commit/9dc0fa7e26afb51d1a5322c63660e0735c2d0ca4))
+
+
+### Bug Fixes
+
+* Fix Tailwind custom variants for loading classes ([#6194](https://github.com/supabase/phoenix/issues/6194)) ([62339b6](https://github.com/supabase/phoenix/commit/62339b6729b59e837241d0a1562a88f0229cd7bd))
+* ReferenceError: Cannot access 'global' before initialization ([#6056](https://github.com/supabase/phoenix/issues/6056)) ([577004e](https://github.com/supabase/phoenix/commit/577004ef5bf161eaa871b6aece258fb37066bbc6))
+
 ## 1.8.3 (2025-12-8)
 
 ### Enhancements
