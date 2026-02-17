@@ -23,6 +23,3 @@ phoenix-*.ez
 .DS_Store
 
 /priv/templates/phx.gen.live/core_components.ex
-
-# Build artifacts (generated during npm publish)
-/priv/static/

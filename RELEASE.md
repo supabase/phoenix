@@ -71,6 +71,22 @@ npm install https://pkg.pr.new/@supabase/phoenix@<pr-number>
 
 This allows you to test the exact build from your PR branch without publishing to npm.
 
+### Assets Build Workflow
+
+Built assets in `priv/static/` are kept in sync with source files via the Assets workflow:
+
+**When it runs:**
+- Automatically on push to `main` or version branches (`v*.*`)
+- When source files in `assets/js/phoenix/` change
+
+**What it does:**
+1. Runs `mix assets.build` to rebuild assets
+2. If built files changed, creates a PR with updates
+3. PR is labeled `automated` and `assets`
+4. Merge the PR to sync built assets to main
+
+**Why:** The npm package exports built files from `priv/static/`. Keeping them in git ensures consistency between git and published packages.
+
 ## 🔴 Upstream Phoenix - Manual Release Process
 
 > **Note**: The following manual process is used by upstream [phoenixframework/phoenix](https://github.com/phoenixframework/phoenix). This Supabase fork uses the automated process above instead.
