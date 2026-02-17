@@ -15,8 +15,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Generate GitHub App token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_AUTOFIX_APP_ID }}
+          private-key: ${{ secrets.GH_AUTOFIX_PRIVATE_KEY }}
+          owner: supabase
+          repositories: phoenix
+
       - uses: googleapis/release-please-action@v4
         id: release
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
 
       # Only continue if a release was created
       - uses: actions/checkout@v4

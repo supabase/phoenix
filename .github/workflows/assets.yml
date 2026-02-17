@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Set up Elixir
         uses: erlef/setup-beam@e6d7c94229049569db56a7ad5a540c051a010af9 # v1.20.4
@@ -63,6 +65,8 @@ jobs:
         with:
           app-id: ${{ secrets.GH_AUTOFIX_APP_ID }}
           private-key: ${{ secrets.GH_AUTOFIX_PRIVATE_KEY }}
+          owner: supabase
+          repositories: phoenix
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
