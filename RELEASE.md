@@ -19,6 +19,22 @@
    - Creates GitHub release
    - Uses OIDC trusted publishing (no npm token needed)
 
+### Preview Releases
+
+To test changes before merging, you can publish a preview package:
+
+1. **Add label** `trigger: preview` to your PR
+2. Workflow automatically publishes a preview package via [pkg-pr-new](https://github.com/stackblitz-labs/pkg.pr.new)
+3. Comment appears on PR with installation instructions
+
+**Usage:**
+```bash
+# The preview package URL will be provided in the PR comment
+npm install https://pkg.pr.new/@supabase/phoenix@<pr-number>
+```
+
+This allows you to test the exact build from your PR branch without publishing to npm.
+
 ## 🔴 Upstream Phoenix - Manual Release Process
 
 > **Note**: The following manual process is used by upstream [phoenixframework/phoenix](https://github.com/phoenixframework/phoenix). This Supabase fork uses the automated process above instead.
