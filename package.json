@@ -1,5 +1,5 @@
 {
-  "name": "phoenix",
+  "name": "@supabase/phoenix",
   "version": "1.8.3",
   "description": "The official JavaScript client for the Phoenix web framework.",
   "license": "MIT",
