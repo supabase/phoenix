@@ -917,6 +917,38 @@ describe("with transport", function (){
     })
   })
 
+  describe("teardown", function (){
+    beforeEach(function (){
+      socket = new Socket("/socket")
+      jest.spyOn(socket, "makeRef").mockReturnValue(defaultRef)
+
+      channel = socket.channel("topic", {one: "two"})
+    })
+
+    it("should perform cleanup", function (){
+      channel.join()
+      channel.push("test", {data: "test1"})
+      channel.push("test", {data: "test2"})
+
+      expect(channel.pushBuffer.length).toBe(2)
+
+      // Schedule rejoin timer
+      channel.rejoinTimer.scheduleTimeout()
+      expect(channel.rejoinTimer.timer).toBeTruthy()
+
+      // Perform teardown
+      channel.teardown()
+
+      // Verify important cleanup
+      expect(channel.pushBuffer.length).toBe(0)
+      expect(channel.state).toBe("closed")
+      expect(channel.rejoinTimer.tries).toBe(0)
+      // Bindings are cleared (this clears ALL bindings, not just user ones)
+      expect(channel.bindings).toStrictEqual([])
+    })
+  })
+
+
   describe("push", function (){
     let joinPush
     let socketSpy

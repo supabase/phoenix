@@ -115,7 +115,7 @@ export default class Channel {
     this.rejoinTimer.reset()
     this.joinPush.destroy()
     this.state = CHANNEL_STATES.closed
-    this.bindings = {}
+    this.bindings = []
   }
 
   /**

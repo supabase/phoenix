@@ -358,7 +358,7 @@ var Phoenix = (() => {
       this.rejoinTimer.reset();
       this.joinPush.destroy();
       this.state = CHANNEL_STATES.closed;
-      this.bindings = {};
+      this.bindings = [];
     }
     /**
      * Hook into channel close
