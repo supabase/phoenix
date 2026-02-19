@@ -21,8 +21,6 @@ jobs:
         with:
           app-id: ${{ secrets.GH_AUTOFIX_APP_ID }}
           private-key: ${{ secrets.GH_AUTOFIX_PRIVATE_KEY }}
-          owner: supabase
-          repositories: phoenix
 
       - uses: googleapis/release-please-action@v4
         id: release
@@ -37,6 +35,8 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         with:
           node-version: 22
+
+      - run: npm install -g npm@latest
 
       # Setup Elixir/OTP for Mix-based build
       - uses: erlef/setup-beam@v1
