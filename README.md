@@ -25,7 +25,6 @@ npm install @supabase/phoenix
 
 This package uses **independent semantic versioning** for the JavaScript client.
 
-- **Current version**: 0.1.0
 - **Based on**: Phoenix Framework 1.8.3 JS client
 - **Last synced**: 2026-02-17
 
