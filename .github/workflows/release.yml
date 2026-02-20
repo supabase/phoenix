@@ -6,13 +6,15 @@ on:
       - main
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write # required for npm trusted publishing
+  contents: read
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
 
     steps:
       - name: Generate GitHub App token
@@ -35,8 +37,17 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         with:
           node-version: 22
+          registry-url: 'https://registry.npmjs.org'
 
-      - run: npm install -g npm@latest
+      - name: Install latest npm (user prefix)
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          mkdir -p "$HOME/.npm-global"
+          npm config set prefix "$HOME/.npm-global"
+          echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
+
+          npm install -g npm@latest
+          npm --version
 
       # Setup Elixir/OTP for Mix-based build
       - uses: erlef/setup-beam@v1
