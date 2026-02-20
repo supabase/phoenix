@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/supabase/phoenix/compare/phoenix-v0.3.0...phoenix-v0.3.1) (2026-02-20)
+
+
+### Bug Fixes
+
+* install latest npm when publishing ([#17](https://github.com/supabase/phoenix/issues/17)) ([0d887fd](https://github.com/supabase/phoenix/commit/0d887fd183a3430cf842b3e108d32da889cf9aae))
+* release setup - npm global install ([c41eb99](https://github.com/supabase/phoenix/commit/c41eb990f5d0dc8937401d0aa303a056acba43a8))
+
 ## [0.3.0](https://github.com/supabase/phoenix/compare/phoenix-v0.2.0...phoenix-v0.3.0) (2026-02-19)
 
 
