@@ -203,8 +203,8 @@ export default class Socket {
     private heartbeatTimeout;
     resetHeartbeat(): void;
     teardown(callback: any, code: any, reason: any): any;
-    waitForBufferDone(callback: any, tries?: number): void;
-    waitForSocketClosed(callback: any, tries?: number): void;
+    waitForBufferDone(conn: any, callback: any, tries?: number): void;
+    waitForSocketClosed(conn: any, callback: any, tries?: number): void;
     /**
     * @param {CloseEvent} event
     */
