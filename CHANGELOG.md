@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/supabase/phoenix/compare/phoenix-v0.3.1...phoenix-v0.4.0) (2026-03-16)
+
+
+### Features
+
+* bump undici from 7.22.0 to 7.24.1 in the npm_and_yarn group across 1 directory ([#21](https://github.com/supabase/phoenix/issues/21)) ([1364189](https://github.com/supabase/phoenix/commit/1364189a8f60830227d3cbb9b476a3fb7605a13a))
+
 ## [0.3.1](https://github.com/supabase/phoenix/compare/phoenix-v0.3.0...phoenix-v0.3.1) (2026-02-20)
 
 
