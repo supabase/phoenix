@@ -1629,7 +1629,7 @@ var Socket = class {
    * @param {Event} error
    */
   onConnError(error) {
-    if (this.hasLogger()) this.log("transport", error);
+    if (this.hasLogger()) this.log("transport", "error", error);
     let transportBefore = this.transport;
     let establishedBefore = this.establishedConnections;
     this.triggerStateCallbacks("error", error, transportBefore, establishedBefore);
