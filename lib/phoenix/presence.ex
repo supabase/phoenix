@@ -473,10 +473,17 @@ defmodule Phoenix.Presence do
 
   @doc false
   def init({module, task_supervisor, pubsub_server, dispatcher}) do
+    cache_table = Module.concat(module, "Cache")
+
+    if :ets.whereis(cache_table) == :undefined do
+      :ets.new(cache_table, [:set, :public, :named_table, read_concurrency: true])
+    end
+
     state = %{
       module: module,
       task_supervisor: task_supervisor,
       pubsub_server: pubsub_server,
+      cache_table: cache_table,
       topics: %{},
       tasks: :queue.new(),
       current_task: nil,
@@ -546,12 +553,18 @@ defmodule Phoenix.Presence do
 
   @doc false
   def list(module, topic) do
-    grouped =
-      module
-      |> Phoenix.Tracker.list(topic)
-      |> group()
+    table = Module.concat(module, "Cache")
 
-    module.fetch(topic, grouped)
+    case :ets.lookup(table, topic) do
+      [{^topic, cached}] ->
+        cached
+
+      [] ->
+        grouped = module |> Phoenix.Tracker.list(topic) |> group()
+        result = module.fetch(topic, grouped)
+        if result != %{}, do: :ets.insert(table, {topic, result})
+        result
+    end
   end
 
   @doc false
@@ -576,6 +589,53 @@ defmodule Phoenix.Presence do
         %{existing | metas: [meta | existing.metas]}
       end)
     end)
+  end
+
+  @doc false
+  def apply_diff_to_cache(cached, joins, leaves) do
+    cached
+    |> apply_leaves(leaves)
+    |> apply_joins(joins)
+  end
+
+  defp apply_leaves(cached, leaves) when map_size(leaves) == 0, do: cached
+
+  defp apply_leaves(cached, leaves) do
+    Enum.reduce(leaves, cached, fn {key, %{metas: leaving_metas}}, acc ->
+      with {:ok, %{metas: existing_metas} = existing} <- Map.fetch(acc, key),
+           [_ | _] = remaining <- reject_refs(existing_metas, leaving_metas) do
+        Map.put(acc, key, %{existing | metas: remaining})
+      else
+        :error -> acc
+        [] -> Map.delete(acc, key)
+      end
+    end)
+  end
+
+  defp apply_joins(cached, joins) when map_size(joins) == 0, do: cached
+
+  defp apply_joins(cached, joins) do
+    Enum.reduce(joins, cached, fn {key, join_data}, acc ->
+      case Map.fetch(acc, key) do
+        {:ok, %{metas: existing_metas} = existing} ->
+          case reject_refs(join_data.metas, existing_metas) do
+            [] -> acc
+            new_metas -> Map.put(acc, key, %{existing | metas: existing_metas ++ new_metas})
+          end
+
+        :error ->
+          Map.put(acc, key, join_data)
+      end
+    end)
+  end
+
+  defp reject_refs(metas, [%{phx_ref: ref}]) do
+    Enum.reject(metas, &(&1.phx_ref == ref))
+  end
+
+  defp reject_refs(metas, filter_metas) do
+    refs = MapSet.new(filter_metas, & &1.phx_ref)
+    Enum.reject(metas, &MapSet.member?(refs, &1.phx_ref))
   end
 
   defp send_continue(%Task{} = task, ref), do: send(task.pid, {ref, :continue})
@@ -616,20 +676,49 @@ defmodule Phoenix.Presence do
   end
 
   defp async_merge(state, diff) do
-    %{module: module} = state
+    %{module: module, cache_table: cache_table} = state
     ref = make_ref()
 
     new_task =
       Task.Supervisor.async(state.task_supervisor, fn ->
-        computed_diffs =
+        fetched =
           Enum.map(diff, fn {topic, {joins, leaves}} ->
             joins = module.fetch(topic, Phoenix.Presence.group(joins))
             leaves = module.fetch(topic, Phoenix.Presence.group(leaves))
-            {topic, %{joins: joins, leaves: leaves}}
+            {topic, joins, leaves}
           end)
 
         receive do
-          {^ref, :continue} -> {:phoenix, ref, computed_diffs}
+          {^ref, :continue} ->
+            {to_insert, to_delete} =
+              Enum.reduce(fetched, {[], []}, fn {topic, joins, leaves}, {ins, del} ->
+                case :ets.lookup(cache_table, topic) do
+                  [{^topic, cached}] ->
+                    full_list = Phoenix.Presence.apply_diff_to_cache(cached, joins, leaves)
+
+                    if map_size(full_list) == 0 do
+                      {ins, [topic | del]}
+                    else
+                      {[{topic, full_list} | ins], del}
+                    end
+
+                  [] ->
+                    {ins, del}
+                end
+              end)
+
+            case to_insert do
+              [] -> :ok
+              entries -> :ets.insert(cache_table, entries)
+            end
+            Enum.each(to_delete, &:ets.delete(cache_table, &1))
+
+            computed_diffs =
+              Enum.map(fetched, fn {topic, joins, leaves} ->
+                {topic, %{joins: joins, leaves: leaves}}
+              end)
+
+            {:phoenix, ref, computed_diffs}
         end
       end)
 
