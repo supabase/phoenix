@@ -571,11 +571,9 @@ defmodule Phoenix.Presence do
 
   @doc false
   def group(presences) do
-    presences
-    |> Enum.reverse()
-    |> Enum.reduce(%{}, fn {key, meta}, acc ->
-      Map.update(acc, to_string(key), %{metas: [meta]}, fn %{metas: metas} ->
-        %{metas: [meta | metas]}
+    Enum.reduce(presences, %{}, fn {key, meta}, acc ->
+      Map.update(acc, to_string(key), %{metas: [meta]}, fn existing ->
+        %{existing | metas: [meta | existing.metas]}
       end)
     end)
   end
