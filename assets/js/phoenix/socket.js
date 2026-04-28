@@ -474,7 +474,7 @@ export default class Socket {
       } catch (e){
         this.log("error", "error in heartbeat callback", e)
       }
-      this.triggerChanError()
+      this.triggerChanError(new Error("heartbeat timeout"))
       this.closeWasClean = false
       this.teardown(() => this.reconnectTimer.scheduleTimeout(), WS_CLOSE_NORMAL, "heartbeat timeout")
     }
@@ -541,7 +541,7 @@ export default class Socket {
   onConnClose(event){
     if(this.conn) this.conn.onclose = () => {} // noop to prevent recursive calls in teardown
     if(this.hasLogger()) this.log("transport", "close", event)
-    this.triggerChanError()
+    this.triggerChanError(event)
     this.clearHeartbeats()
     if(!this.closeWasClean){
       this.reconnectTimer.scheduleTimeout()
@@ -559,17 +559,18 @@ export default class Socket {
     let establishedBefore = this.establishedConnections
     this.triggerStateCallbacks("error", error, transportBefore, establishedBefore)
     if(transportBefore === this.transport || establishedBefore > 0){
-      this.triggerChanError()
+      this.triggerChanError(error)
     }
   }
 
   /**
    * @private
+   * @param {unknown} [reason] underlying close/error event forwarded to channel error listeners
    */
-  triggerChanError(){
+  triggerChanError(reason){
     this.channels.forEach(channel => {
       if(!(channel.isErrored() || channel.isLeaving() || channel.isClosed())){
-        channel.trigger(CHANNEL_EVENTS.error)
+        channel.trigger(CHANNEL_EVENTS.error, reason)
       }
     })
   }
