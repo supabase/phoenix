@@ -697,6 +697,18 @@ describe("with transports", function (){
       expect(spy).toHaveBeenCalledWith("timeout")
     })
 
+    it("forwards heartbeat timeout reason to channels", () => {
+      const channel = socket.channel("topic")
+      const triggerSpy = jest.spyOn(channel, "trigger")
+      channel.join()
+      socket.sendHeartbeat()
+      socket.heartbeatTimeout()
+      const errorCall = triggerSpy.mock.calls.find(call => call[0] === "phx_error")
+      expect(errorCall).toBeDefined()
+      expect(errorCall[1]).toBeInstanceOf(Error)
+      expect(errorCall[1].message).toBe("heartbeat timeout")
+    })
+
     it("sent", () => {
       const spy = jest.fn()
       socket.onHeartbeat(spy)
@@ -995,8 +1007,9 @@ describe("with transports", function (){
       const triggerSpy = jest.spyOn(channel, "trigger")
       channel.join()
       expect(channel.state).toBe("joining")
-      socket.onConnClose()
-      expect(triggerSpy).toHaveBeenCalledWith("phx_error")
+      const closeEvent = {code: 1006, reason: "abnormal"}
+      socket.onConnClose(closeEvent)
+      expect(triggerSpy).toHaveBeenCalledWith("phx_error", closeEvent)
     })
 
     it("triggers channel error if joined", function (){
@@ -1004,8 +1017,9 @@ describe("with transports", function (){
       const triggerSpy = jest.spyOn(channel, "trigger")
       channel.join().trigger("ok", {})
       expect(channel.state).toBe("joined")
-      socket.onConnClose()
-      expect(triggerSpy).toHaveBeenCalledWith("phx_error")
+      const closeEvent = {code: 1006, reason: "abnormal"}
+      socket.onConnClose(closeEvent)
+      expect(triggerSpy).toHaveBeenCalledWith("phx_error", closeEvent)
     })
 
     it("does not trigger channel error after leave", function (){
@@ -1014,8 +1028,8 @@ describe("with transports", function (){
       channel.join().trigger("ok", {})
       channel.leave()
       expect(channel.state).toBe("closed")
-      socket.onConnClose()
-      expect(triggerSpy).not.toHaveBeenCalledWith("phx_error")
+      socket.onConnClose({code: 1000})
+      expect(triggerSpy).not.toHaveBeenCalledWith("phx_error", expect.anything())
     })
 
     it("does not send heartbeat after explicit disconnect", function (done){
@@ -1073,7 +1087,7 @@ describe("with transports", function (){
       socket.onConnOpen()
       expect(channel.state).toBe("joining")
       socket.onConnError("error")
-      expect(triggerSpy).toHaveBeenCalledWith("phx_error")
+      expect(triggerSpy).toHaveBeenCalledWith("phx_error", "error")
     })
 
     it("triggers channel error if joining with no connection", function (){
@@ -1082,7 +1096,7 @@ describe("with transports", function (){
       channel.join()
       expect(channel.state).toBe("joining")
       socket.onConnError("error")
-      expect(triggerSpy).toHaveBeenCalledWith("phx_error")
+      expect(triggerSpy).toHaveBeenCalledWith("phx_error", "error")
     })
 
     it("triggers channel error if joined", function (){
@@ -1103,7 +1117,7 @@ describe("with transports", function (){
 
       expect(transport).toBe(WebSocket)
       expect(connectionsCount).toBe(1)
-      expect(triggerSpy).toHaveBeenCalledWith("phx_error")
+      expect(triggerSpy).toHaveBeenCalledWith("phx_error", "error")
     })
 
     it("does not trigger channel error after leave", function (){
@@ -1113,7 +1127,7 @@ describe("with transports", function (){
       channel.leave()
       expect(channel.state).toBe("closed")
       socket.onConnError("error")
-      expect(triggerSpy).not.toHaveBeenCalledWith("phx_error")
+      expect(triggerSpy).not.toHaveBeenCalledWith("phx_error", expect.anything())
     })
 
     it("does not trigger channel error if transport replaced with no previous connection", function (){
@@ -1133,7 +1147,7 @@ describe("with transports", function (){
 
       expect(connectionsCount).toBe(0)
       expect(socket.transport).toBe(FakeTransport)
-      expect(triggerSpy).not.toHaveBeenCalledWith("phx_error")
+      expect(triggerSpy).not.toHaveBeenCalledWith("phx_error", expect.anything())
     })
   })
 
