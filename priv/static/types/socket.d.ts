@@ -216,6 +216,7 @@ export default class Socket {
     private onConnError;
     /**
      * @private
+     * @param {unknown} [reason] underlying close/error event forwarded to channel error listeners
      */
     private triggerChanError;
     /**
