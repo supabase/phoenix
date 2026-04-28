@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.1](https://github.com/supabase/phoenix/compare/phoenix-v0.4.0...phoenix-v0.4.1) (2026-04-28)
+
+
+### Bug Fixes
+
+* forward close/error reason to channels in triggerChanError ([#29](https://github.com/supabase/phoenix/issues/29)) ([9b327f5](https://github.com/supabase/phoenix/commit/9b327f55cb2bb24720c14d79c1f5534d1d70e899))
+* **phoenix-js:** correct log method call ([ddd3639](https://github.com/supabase/phoenix/commit/ddd3639703395a5e0f46bae1e85b4893edaa7b82))
+* **phoenix-js:** correct log method call ([#6641](https://github.com/supabase/phoenix/issues/6641)) ([1bf4f6d](https://github.com/supabase/phoenix/commit/1bf4f6dfc3a99011f460573e72930a7aac472153))
+* rebuild assets ([#33](https://github.com/supabase/phoenix/issues/33)) ([8b8c7b2](https://github.com/supabase/phoenix/commit/8b8c7b2422f944c4066b79f3bbd982dc9a125bc9))
+* rebuild assets from source changes ([8b8c7b2](https://github.com/supabase/phoenix/commit/8b8c7b2422f944c4066b79f3bbd982dc9a125bc9))
+
 ## [0.4.0](https://github.com/supabase/phoenix/compare/phoenix-v0.3.1...phoenix-v0.4.0) (2026-03-16)
 
 
