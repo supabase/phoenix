@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.2](https://github.com/supabase/phoenix/compare/phoenix-v0.4.1...phoenix-v0.4.2) (2026-05-08)
+
+
+### Bug Fixes
+
+* guard sessionStorage read in Socket constructor ([#35](https://github.com/supabase/phoenix/issues/35)) ([298070d](https://github.com/supabase/phoenix/commit/298070d4739b72f6ce37b07a6d5cd5ac2fb02b01))
+* rebuild assets ([#37](https://github.com/supabase/phoenix/issues/37)) ([efbf513](https://github.com/supabase/phoenix/commit/efbf513e2ea5f35e56a8d2626e3eb22eda78410e))
+* rebuild assets from source changes ([efbf513](https://github.com/supabase/phoenix/commit/efbf513e2ea5f35e56a8d2626e3eb22eda78410e))
+
 ## [0.4.1](https://github.com/supabase/phoenix/compare/phoenix-v0.4.0...phoenix-v0.4.1) (2026-04-28)
 
 
