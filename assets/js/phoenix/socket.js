@@ -58,8 +58,14 @@ export default class Socket {
     this.longPollFallbackMs = opts.longPollFallbackMs
     /** @type{ReturnType<typeof setTimeout>} */
     this.fallbackTimer = null
+    // In some environments (sandboxed iframes without `allow-same-origin`,
+    // in-app webviews, "block third-party storage" privacy modes), reading
+    // `global.sessionStorage` throws SecurityError at the property-access level.
+    // Wrap the read so the Socket constructor cannot throw synchronously.
+    let envSessionStorage = null
+    try { envSessionStorage = global && global.sessionStorage } catch {}
     /** @type{Storage} */
-    this.sessionStore = opts.sessionStorage || (global && global.sessionStorage)
+    this.sessionStore = opts.sessionStorage || envSessionStorage
     /** @type{number} */
     this.establishedConnections = 0
     /** @type{Encode<void>} */
