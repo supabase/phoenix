@@ -1172,7 +1172,12 @@ var Socket = class {
     this.primaryPassedHealthCheck = false;
     this.longPollFallbackMs = opts.longPollFallbackMs;
     this.fallbackTimer = null;
-    this.sessionStore = opts.sessionStorage || global && global.sessionStorage;
+    let envSessionStorage = null;
+    try {
+      envSessionStorage = global && global.sessionStorage;
+    } catch {
+    }
+    this.sessionStore = opts.sessionStorage || envSessionStorage;
     this.establishedConnections = 0;
     this.defaultEncoder = serializer_default.encode.bind(serializer_default);
     this.defaultDecoder = serializer_default.decode.bind(serializer_default);
