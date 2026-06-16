@@ -1120,6 +1120,20 @@ describe("with transport", function (){
       expect(leavePush).not.toBeDefined()
     })
 
+    it("resets joinedOnce after leave 'ok' so the channel can be rejoined", function (){
+      expect(channel.joinedOnce).toBe(true)
+
+      channel.leave().trigger("ok", {})
+
+      expect(channel.state).toBe("closed")
+      expect(channel.joinedOnce).toBe(false)
+
+      // a subsequent join() succeeds and re-arms the channel
+      expect(() => channel.join()).not.toThrow()
+      expect(channel.joinedOnce).toBe(true)
+      expect(channel.state).toBe("joining")
+    })
+
     // TODO - the following tests are skipped until Channel.leave
     // behavior can be fixed; currently, 'ok' is triggered immediately
     // within Channel.leave so timeout callbacks are never reached
