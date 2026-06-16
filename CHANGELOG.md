@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.3](https://github.com/supabase/phoenix/compare/phoenix-v0.4.2...phoenix-v0.4.3) (2026-06-16)
+
+
+### Bug Fixes
+
+* **channel:** reset joinedOnce on leave so channel can be rejoined ([#39](https://github.com/supabase/phoenix/issues/39)) ([62cee66](https://github.com/supabase/phoenix/commit/62cee661ebeefe37d2417dfe0c50b6f9d9665d07))
+* rebuild assets ([#41](https://github.com/supabase/phoenix/issues/41)) ([1870d43](https://github.com/supabase/phoenix/commit/1870d43996337e8acd581d1fcbfdfefba47eb4a5))
+* rebuild assets from source changes ([1870d43](https://github.com/supabase/phoenix/commit/1870d43996337e8acd581d1fcbfdfefba47eb4a5))
+
 ## [0.4.2](https://github.com/supabase/phoenix/compare/phoenix-v0.4.1...phoenix-v0.4.2) (2026-05-08)
 
 
