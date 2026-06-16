@@ -429,6 +429,7 @@ var Channel = class {
     let onClose = () => {
       if (this.socket.hasLogger()) this.socket.log("channel", `leave ${this.topic}`);
       this.trigger(CHANNEL_EVENTS.close, "leave");
+      this.joinedOnce = false;
     };
     let leavePush = new Push(this, CHANNEL_EVENTS.leave, closure({}), timeout);
     leavePush.receive("ok", () => onClose()).receive("timeout", () => onClose());
