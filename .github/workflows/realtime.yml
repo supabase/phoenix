@@ -18,7 +18,7 @@ env:
 jobs:
   tests:
     name: Realtime (${{ matrix.postgres }} - Partition ${{ matrix.partition }})
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     env:
       POSTGRES_IMAGE: ${{ matrix.postgres_image }}
       DB_USER_REALTIME: ${{ matrix.db_user_realtime }}
