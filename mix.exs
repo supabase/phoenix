@@ -111,7 +111,8 @@ defmodule Phoenix.MixProject do
       {:mint_web_socket, "~> 1.0.0", only: :test},
 
       # Dev dependencies
-      {:esbuild, "~> 0.8", only: :dev}
+      {:esbuild, "~> 0.8", only: :dev},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 
