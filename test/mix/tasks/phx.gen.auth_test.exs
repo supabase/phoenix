@@ -226,7 +226,7 @@ defmodule Mix.Tasks.Phx.Gen.AuthTest do
       assert mailer_notice =~ ~s(defmodule MyApp.Mailer do)
       assert mailer_notice =~ ~s(use Swoosh.Mailer, otp_app: :my_app)
       assert mailer_notice =~ ~s(def deps do)
-      assert mailer_notice =~ ~s(https://hexdocs.pm/swoosh)
+      assert mailer_notice =~ ~s(https://swoosh.hexdocs.pm)
     end)
   end
 
@@ -366,7 +366,7 @@ defmodule Mix.Tasks.Phx.Gen.AuthTest do
       assert mailer_notice =~ ~s(defmodule MyApp.Mailer do)
       assert mailer_notice =~ ~s(use Swoosh.Mailer, otp_app: :my_app)
       assert mailer_notice =~ ~s(def deps do)
-      assert mailer_notice =~ ~s(https://hexdocs.pm/swoosh)
+      assert mailer_notice =~ ~s(https://swoosh.hexdocs.pm)
     end)
   end
 
@@ -1442,7 +1442,7 @@ defmodule Mix.Tasks.Phx.Gen.AuthTest do
   test "allows templates to be overridden", config do
     in_tmp_phx_project(config.test, fn ->
       File.mkdir_p!("priv/templates/phx.gen.auth")
-      File.write!("priv/templates/phx.gen.auth/auth.ex", "#it works!")
+      File.write!("priv/templates/phx.gen.auth/auth.ex.eex", "#it works!")
 
       send(self(), {:mix_shell_input, :yes?, false})
 
