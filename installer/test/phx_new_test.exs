@@ -68,6 +68,8 @@ defmodule Mix.Tasks.Phx.NewTest do
         assert file =~
                  ~r/^  http: \[port: String.to_integer\(System.get_env\("PORT", "4000"\)\)\]$/m
 
+        assert file =~ "lib/phx_blog_web/router\\.ex$"
+        assert file =~ "lib/phx_blog_web/(controllers|live|components)/.*\\.(ex|heex)$"
         assert file =~ ~r/^\s+ip: {0, 0, 0, 0, 0, 0, 0, 0}$/m
       end)
 
@@ -150,8 +152,7 @@ defmodule Mix.Tasks.Phx.NewTest do
 
       assert_file("phx_blog/config/dev.exs", fn file ->
         assert file =~ "esbuild: {Esbuild,"
-        assert file =~ "lib/phx_blog_web/router\\.ex$"
-        assert file =~ "lib/phx_blog_web/(controllers|live|components)/.*\\.(ex|heex)$"
+        refute file =~ "live_reload"
         assert file =~ "http: [ip: {127, 0, 0, 1}]"
       end)
 
@@ -165,8 +166,9 @@ defmodule Mix.Tasks.Phx.NewTest do
       assert File.exists?("phx_blog/assets/vendor")
 
       assert_file("phx_blog/config/config.exs", fn file ->
-        assert file =~ "cd: Path.expand(\"../assets\", __DIR__)"
         assert file =~ "config :esbuild"
+        assert file =~ "--format=esm"
+        assert file =~ "cd: Path.expand(\"../assets\", __DIR__)"
       end)
 
       # Ecto
@@ -822,6 +824,112 @@ defmodule Mix.Tasks.Phx.NewTest do
     end)
   end
 
+  test "new --interactive with defaults generates project" do
+    in_tmp("new interactive defaults", fn ->
+      # path
+      send(self(), {:mix_shell_input, :prompt, "my_app"})
+      # database: postgres (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # binary_id: no (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # web: LiveView (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # assets: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # dashboard: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # mailer: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # gettext: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # confirm: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+
+      assert {:ok, "my_app", opts} = Phx.New.Interactive.run()
+
+      assert %{
+               ecto: true,
+               binary_id: false,
+               html: true,
+               live: true,
+               dashboard: true,
+               mailer: true,
+               gettext: true,
+               assets: true,
+               database: "postgres"
+             } = Map.new(opts)
+    end)
+  end
+
+  test "new --interactive with custom config" do
+    in_tmp("new interactive custom", fn ->
+      # path
+      send(self(), {:mix_shell_input, :prompt, "custom_app"})
+      # database: sqlite3 (option 4)
+      send(self(), {:mix_shell_input, :prompt, "4"})
+      # binary_id: yes
+      send(self(), {:mix_shell_input, :prompt, "y"})
+      # web: API-only (option 3, skips assets prompt)
+      send(self(), {:mix_shell_input, :prompt, "3"})
+      # dashboard: no
+      send(self(), {:mix_shell_input, :prompt, "n"})
+      # mailer: no
+      send(self(), {:mix_shell_input, :prompt, "n"})
+      # gettext: no
+      send(self(), {:mix_shell_input, :prompt, "n"})
+      # confirm: yes
+      send(self(), {:mix_shell_input, :prompt, "y"})
+
+      assert {:ok, "custom_app", opts} = Phx.New.Interactive.run()
+
+      assert %{
+               ecto: true,
+               binary_id: true,
+               html: false,
+               live: false,
+               dashboard: false,
+               mailer: false,
+               gettext: false,
+               assets: false,
+               database: "sqlite3"
+             } = Map.new(opts)
+    end)
+  end
+
+  test "new --interactive aborts when user declines" do
+    in_tmp("new interactive abort", fn ->
+      # path
+      send(self(), {:mix_shell_input, :prompt, "my_app"})
+      # database: postgres (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # binary_id: no (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # web: LiveView (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # assets: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # dashboard: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # mailer: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # gettext: yes (default)
+      send(self(), {:mix_shell_input, :prompt, ""})
+      # confirm: no (abort)
+      send(self(), {:mix_shell_input, :prompt, "n"})
+
+      assert :abort = Phx.New.Interactive.run()
+    end)
+  end
+
+  test "new --interactive aborts on eof" do
+    in_tmp("new interactive eof", fn ->
+      # User presses Ctrl+C or Ctrl+D
+      send(self(), {:mix_shell_input, :prompt, :eof})
+
+      assert :abort = Phx.New.Interactive.run()
+    end)
+  end
+
   test "new with reserved name" do
     assert_raise Mix.Error, ~r/Application name cannot be "server" as it is reserved/, fn ->
       Mix.Tasks.Phx.New.run(["server"])
@@ -851,7 +959,20 @@ defmodule Mix.Tasks.Phx.NewTest do
   end
 
   describe "PHX_NEW_CACHE_DIR" do
-    @phx_new_cache_dir System.get_env("PHX_NEW_CACHE_DIR")
+    setup do
+      phx_new_cache_dir = System.get_env("PHX_NEW_CACHE_DIR")
+
+      on_exit(fn ->
+        if phx_new_cache_dir do
+          System.put_env("PHX_NEW_CACHE_DIR", phx_new_cache_dir)
+        else
+          System.delete_env("PHX_NEW_CACHE_DIR")
+        end
+      end)
+
+      :ok
+    end
+
     test "new with PHX_NEW_CACHE_DIR" do
       System.put_env("PHX_NEW_CACHE_DIR", __DIR__)
       cache_files = File.ls!(__DIR__)
@@ -865,12 +986,6 @@ defmodule Mix.Tasks.Phx.NewTest do
           assert file in project_files, "#{file} not copied to new project"
         end
       end)
-    after
-      if @phx_new_cache_dir do
-        System.put_env("PHX_NEW_CACHE_DIR", @phx_new_cache_dir)
-      else
-        System.delete_env("PHX_NEW_CACHE_DIR")
-      end
     end
 
     test "new with PHX_NEW_CACHE_DIR that doesn't exist" do
@@ -883,12 +998,6 @@ defmodule Mix.Tasks.Phx.NewTest do
         project_files = File.ls!(Path.join(File.cwd!(), @app_name))
         assert "mix.exs" in project_files
       end)
-    after
-      if @phx_new_cache_dir do
-        System.put_env("PHX_NEW_CACHE_DIR", @phx_new_cache_dir)
-      else
-        System.delete_env("PHX_NEW_CACHE_DIR")
-      end
     end
   end
 end

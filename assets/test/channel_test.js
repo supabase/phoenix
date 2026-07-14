@@ -72,6 +72,15 @@ describe("with transport", function (){
         "base64url.bearer.phx.MTIzNA",
       ])
     })
+
+    it("sets subprotocols when authToken is a function", function (){
+      let authToken = "1234"
+      const socket = new Socket("/socket", {authToken: () => authToken})
+
+      authToken = "5678"
+      socket.connect()
+      expect(socket.conn.protocols).toEqual(["phoenix", "base64url.bearer.phx.NTY3OA"])
+    })
   })
 
   describe("updating join params", function (){

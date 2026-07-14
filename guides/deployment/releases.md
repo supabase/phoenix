@@ -8,7 +8,7 @@ The only thing we'll need for this guide is a working Phoenix application. For t
 
 ## Releases, assemble!
 
-If you are not familiar with Elixir releases yet, we recommend you to read [Elixir's excellent docs](https://hexdocs.pm/mix/Mix.Tasks.Release.html) before continuing.
+If you are not familiar with Elixir releases yet, we recommend you to read [Elixir's excellent docs](https://mix.hexdocs.pm/Mix.Tasks.Release.html) before continuing.
 
 Once that is done, you can assemble a release by going through all of the steps in our general [deployment guide](deployment.html) with `mix release` at the end. Let's recap.
 
@@ -90,7 +90,7 @@ Release created at _build/prod/rel/my_app!
 
 You can start the release by calling `_build/prod/rel/my_app/bin/my_app start`, or boot your webserver by calling `_build/prod/rel/my_app/bin/server`, where you have to replace `my_app` by your current application name.
 
-Now you can get all of the files under the `_build/prod/rel/my_app` directory, package it, and run it in any production machine with the same OS and architecture as the one that assembled the release. For more details, check the [docs for `mix release`](https://hexdocs.pm/mix/Mix.Tasks.Release.html).
+Now you can get all of the files under the `_build/prod/rel/my_app` directory, package it, and run it in any production machine with the same OS and architecture as the one that assembled the release. For more details, check the [docs for `mix release`](https://mix.hexdocs.pm/Mix.Tasks.Release.html).
 
 ## Ecto migrations
 
@@ -159,22 +159,28 @@ Elixir releases work well with container technologies such as Docker. The idea i
 If you call `mix phx.gen.release --docker`, you'll see a new file with content similar to:
 
 ```Dockerfile
-# Find eligible builder and runner images on Docker Hub. We use Ubuntu/Debian
-# instead of Alpine to avoid DNS resolution issues in production.
-#
-# https://hub.docker.com/r/hexpm/elixir/tags?page=1&name=ubuntu
-# https://hub.docker.com/_/ubuntu?tab=tags
-#
 # This file is based on these images:
 #
-#   - https://hub.docker.com/r/hexpm/elixir/tags - for the build image
-#   - https://hub.docker.com/_/debian?tab=tags&page=1&name=bullseye-20230612-slim - for the release image
-#   - https://pkgs.org/ - resource for finding needed packages
-#   - Ex: hexpm/elixir:1.18.4-erlang-27.3.4.3-debian-trixie-20250908-slim
+#   - https://hub.docker.com/r/hexpm/elixir/tags - for the builder image
+#     E.g.: docker.io/hexpm/elixir:1.20.2-erlang-29.0.3-debian-trixie-20260623-slim
+#   - https://hub.docker.com/_/debian/tags?name=trixie-20260623-slim - for the runner image
+#     E.g.: docker.io/debian:trixie-20260623-slim
 #
-ARG ELIXIR_VERSION=1.18.4
-ARG OTP_VERSION=27.3.4.3
-ARG DEBIAN_VERSION=trixie-20250908-slim
+# Find builder and runner images on Docker Hub or on Hex's Build Server (Bob).
+# We recommend using Bob's Web UI to find recent tags:
+#
+#   - https://bob.hex.pm/docker
+#
+# We suggest using the same Debian version for both the builder and runner images.
+#
+# We suggest Debian/Ubuntu instead of Alpine to avoid production compatibility issues
+# (such as DNS resolution failures, and dynamically linked NIFs/precompiled binaries).
+#
+# For finding packages in Debian, search on https://packages.debian.org/.
+
+ARG ELIXIR_VERSION=1.20.3
+ARG OTP_VERSION=29.0.3
+ARG DEBIAN_VERSION=trixie-20260623-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
@@ -268,7 +274,7 @@ A few points about configuring a containerized application:
 
 - The more configuration you can provide at runtime (using `config/runtime.exs`), the more reusable your images will be across environments. In particular, secrets like database credentials and API keys should not be compiled into the image, but rather should be provided when creating containers based on that image. This is why the `Endpoint`'s `:secret_key_base` is configured in `config/runtime.exs` by default.
 
-- If possible, any environment variables that are needed at runtime should be read in `config/runtime.exs`, not scattered throughout your code. Having them all visible in one place will make it easier to ensure the containers get what they need, especially if the person doing the infrastructure work does not work on the Elixir code. Libraries in particular should never directly read environment variables; all their configuration should be handed to them by the top-level application, preferably [without using the application environment](https://hexdocs.pm/elixir/design-anti-patterns.html#using-application-configuration-for-libraries).
+- If possible, any environment variables that are needed at runtime should be read in `config/runtime.exs`, not scattered throughout your code. Having them all visible in one place will make it easier to ensure the containers get what they need, especially if the person doing the infrastructure work does not work on the Elixir code. Libraries in particular should never directly read environment variables; all their configuration should be handed to them by the top-level application, preferably [without using the application environment](https://elixir.hexdocs.pm/design-anti-patterns.html#using-application-configuration-for-libraries).
 
 ## Clustering
 

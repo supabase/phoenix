@@ -1,22 +1,26 @@
 # Components and HEEx
 
-> **Requirement**: This guide expects that you have gone through the [introductory guides](installation.html) and got a Phoenix application [up and running](up_and_running.html).
-
-> **Requirement**: This guide expects that you have gone through the [request life-cycle guide](request_lifecycle.html).
+> ### Requirement {: .tip}
+>
+> This guide expects that you have:
+>
+> * Gone through the [introductory guides](installation.html)
+> * Got a Phoenix application [up and running](up_and_running.html)
+> * Gone through the [request life-cycle guide](request_lifecycle.html)
 
 The Phoenix endpoint pipeline takes a request, routes it to a controller, and calls a view module to render a template. The view interface from the controller is simple – the controller calls a view function with the connection's assigns, and the function's job is to return a HEEx template. We call any function that accepts an `assigns` parameter and returns a HEEx template a *function component*.
 
 > The Phoenix framework is designed for HTML applications, JSON APIs, GraphQL endpoints, etc. For this reason, all of the functionality related to HTML rendering comes as part of two separate packages:
 >
-> * [`phoenix_html`](https://hexdocs.pm/phoenix_html) - defines the building blocks for writing HTML safely. In your project, you'll interact primarily with the `Phoenix.HTML` module, which is imported by default in all templates
+> * [`phoenix_html`](https://phoenix-html.hexdocs.pm) - defines the building blocks for writing HTML safely. In your project, you'll interact primarily with the `Phoenix.HTML` module, which is imported by default in all templates
 >
-> * [`phoenix_live_view`](https://hexdocs.pm/phoenix_live_view) - a library for rich, real-time user experiences with server-rendered HTML. While LiveView provides several abstraction for building collaborative and dynamic applications, it also defines the `HEEx` template language, function components, and JS commands, which brings powerful abstractions for all kinds of server-rendered HTML applications
+> * [`phoenix_live_view`](https://phoenix-live-view.hexdocs.pm) - a library for rich, real-time user experiences with server-rendered HTML. While LiveView provides several abstractions for building collaborative and dynamic applications, it also defines the `HEEx` template language, function components, and JS commands, which bring powerful abstractions for all kinds of server-rendered HTML applications
 
 In this chapter, we will recap how components are used and dig deeper to discover new use cases.
 
 ## Function components
 
-Function components are the essential building block for any kind of markup-based template rendering you'll perform in Phoenix. They serve as a shared abstraction for the standard MVC controller-based applications, LiveView applications, layouts, and smaller UI definitions you'll use throughout other templates. Their documentation is available in [the `Phoenix.Component` module](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html).
+Function components are the essential building block for any kind of markup-based template rendering you'll perform in Phoenix. They serve as a shared abstraction for the standard MVC controller-based applications, LiveView applications, layouts, and smaller UI definitions you'll use throughout other templates. Their documentation is available in [the `Phoenix.Component` module](https://phoenix-live-view.hexdocs.pm/Phoenix.Component.html).
 
 At the end of the Request life-cycle chapter, we created a template at `lib/hello_web/controllers/hello_html/show.html.heex`, let's open it up:
 
@@ -67,7 +71,7 @@ defmodule HelloWeb.HelloHTML do
 end
 ```
 
-We declared the attributes we accept via the [`Phoenix.Component.attr/3`](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#attr/3) macro, then we defined our `greet/1` function which returns the HEEx template.
+We declared the attributes we accept via the [`Phoenix.Component.attr/3`](https://phoenix-live-view.hexdocs.pm/Phoenix.Component.html#attr/3) macro, then we defined our `greet/1` function which returns the HEEx template.
 
 Next we need to update `show.html.heex`:
 
@@ -81,7 +85,7 @@ Next we need to update `show.html.heex`:
 
 When we reload `http://localhost:4000/hello/Frank`, we should see the same content as before! The `show.html.heex` is now invoking two different function components:
 
-  * `<Layouts.app` - the syntax for invoking function componente defined in a separate module and it follows the same rules as calling any other function in Elixir
+  * `<Layouts.app` - the syntax for invoking function components defined in a separate module and it follows the same rules as calling any other function in Elixir
 
   * `<.greet` - when the function component is defined in the same module as the template, we can skip the module name, and invoke the component using its name prefixed with a dot
 
@@ -97,7 +101,7 @@ Overall, function components are the essential building block of Phoenix renderi
 
 ## HEEx
 
-Function components and templates files are powered by [the HEEx template language](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#sigil_H/2), which stands for "HTML + Embedded Elixir". We can write Elixir code inside `{...}` for HTML-aware interpolation inside tag attributes and the body, as done above. For example, we use `@name` to access the key `name` defined inside `assigns`.
+Function components and templates files are powered by [the HEEx template language](https://phoenix-live-view.hexdocs.pm/Phoenix.Component.html#sigil_H/2), which stands for "HTML + Embedded Elixir". We can write Elixir code inside `{...}` for HTML-aware interpolation inside tag attributes and the body, as done above. For example, we use `@name` to access the key `name` defined inside `assigns`.
 
 We can also interpolate arbitrary HEEx blocks using `<%= ... %>`. This is often used for block constructs. For example, in order to have conditionals:
 
@@ -194,9 +198,9 @@ CoreComponents also play an important role in Phoenix code generators, as the co
 
   * Explore the generated `CoreComponents` module to learn more from practical examples
 
-  * Read the official documentation for [`Phoenix.Component`](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html)
+  * Read the official documentation for [`Phoenix.Component`](https://phoenix-live-view.hexdocs.pm/Phoenix.Component.html)
 
-  * Read the official documentation for [HEEx and the ~H sigils](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#sigil_H/2)
+  * Read the official documentation for [HEEx and the ~H sigils](https://phoenix-live-view.hexdocs.pm/Phoenix.Component.html#sigil_H/2)
 
   * If you are looking for higher level components beyond the minimal ones included by Phoenix, [the LiveView project keeps a list of component systems](https://github.com/phoenixframework/phoenix_live_view#component-systems)
 

@@ -79,6 +79,9 @@ defmodule Phoenix.Socket do
       This option controls how many supervisors will be spawned
       to handle channels. Defaults to the number of cores.
 
+    * `:max_channels_per_transport` - the maximum number of channels that may be
+      joined per transport process. Defaults to `100`.
+
   ## Garbage collection
 
   It's possible to force garbage collection in the transport process after
@@ -213,8 +216,7 @@ defmodule Phoenix.Socket do
 
   To deny connection, return `:error` or `{:error, term}`. To control the
   response the client receives in that case, [define an error handler in the
-  websocket
-  configuration](https://hexdocs.pm/phoenix/Phoenix.Endpoint.html#socket/3-websocket-configuration).
+  websocket configuration](`Phoenix.Endpoint.socket/3#websocket-configuration`).
 
   See `Phoenix.Token` documentation for examples in
   performing token verification on connect.
@@ -501,7 +503,16 @@ defmodule Phoenix.Socket do
 
     case negotiate_serializer(Keyword.fetch!(options, :serializer), vsn) do
       {:ok, serializer} ->
-        result = user_connect(user_socket, endpoint, transport, serializer, params, connect_info)
+        result =
+          user_connect(
+            user_socket,
+            endpoint,
+            transport,
+            serializer,
+            params,
+            connect_info,
+            options
+          )
 
         metadata = %{
           endpoint: endpoint,
@@ -556,7 +567,11 @@ defmodule Phoenix.Socket do
   end
 
   def __info__(%Broadcast{event: "disconnect"}, state) do
-    {:stop, {:shutdown, :disconnected}, state}
+    # Close code 1001 ("Going Away") signals the client that the connection
+    # is intentionally closed but a reconnect is expected — phoenix.js gates
+    # reconnects behind a closeCode !== 1000 check.
+    # See https://github.com/mtrudel/bandit/issues/582.
+    {:stop, {:shutdown, :disconnected}, 1001, state}
   end
 
   def __info__(:socket_drain, state) do
@@ -595,7 +610,7 @@ defmodule Phoenix.Socket do
     :ok
   end
 
-  defp negotiate_serializer(serializers, vsn) when is_list(serializers) do
+  defp negotiate_serializer(serializers, vsn) when is_list(serializers) and is_binary(vsn) do
     case Version.parse(vsn) do
       {:ok, vsn} ->
         serializers
@@ -619,7 +634,12 @@ defmodule Phoenix.Socket do
     end
   end
 
-  defp user_connect(handler, endpoint, transport, serializer, params, connect_info) do
+  defp negotiate_serializer(_serializer, vsn) do
+    Logger.warning("Client sent invalid transport version \"#{vsn}\"")
+    :error
+  end
+
+  defp user_connect(handler, endpoint, transport, serializer, params, connect_info, options) do
     # The information in the Phoenix.Socket goes to userland and channels.
     socket = %Socket{
       handler: handler,
@@ -632,7 +652,8 @@ defmodule Phoenix.Socket do
     # The information in the state is kept only inside the socket process.
     state = %{
       channels: %{},
-      channels_inverse: %{}
+      channels_inverse: %{},
+      max_channels_per_transport: Keyword.get(options, :max_channels_per_transport, 100)
     }
 
     connect_result =
@@ -700,29 +721,45 @@ defmodule Phoenix.Socket do
        ) do
     case socket.handler.__channel__(topic) do
       {channel, opts} ->
-        case Phoenix.Channel.Server.join(socket, channel, message, opts) do
-          {:ok, reply, pid} ->
-            reply = %Reply{
-              join_ref: join_ref,
-              ref: ref,
-              topic: topic,
-              status: :ok,
-              payload: reply
-            }
+        if map_size(state.channels) >= state.max_channels_per_transport do
+          Logger.warning(
+            "Reached max channels per transport limit of #{state.max_channels_per_transport} for socket #{inspect(socket.id)}"
+          )
 
-            state = put_channel(state, pid, topic, join_ref)
-            {:reply, :ok, encode_reply(socket, reply), {state, socket}}
+          reply = %Reply{
+            join_ref: join_ref,
+            ref: ref,
+            topic: topic,
+            status: :error,
+            payload: %{reason: "too many channels joined"}
+          }
 
-          {:error, reply} ->
-            reply = %Reply{
-              join_ref: join_ref,
-              ref: ref,
-              topic: topic,
-              status: :error,
-              payload: reply
-            }
+          {:reply, :error, encode_reply(socket, reply), {state, socket}}
+        else
+          case Phoenix.Channel.Server.join(socket, channel, message, opts) do
+            {:ok, reply, pid} ->
+              reply = %Reply{
+                join_ref: join_ref,
+                ref: ref,
+                topic: topic,
+                status: :ok,
+                payload: reply
+              }
 
-            {:reply, :error, encode_reply(socket, reply), {state, socket}}
+              state = put_channel(state, pid, topic, join_ref)
+              {:reply, :ok, encode_reply(socket, reply), {state, socket}}
+
+            {:error, reply} ->
+              reply = %Reply{
+                join_ref: join_ref,
+                ref: ref,
+                topic: topic,
+                status: :error,
+                payload: reply
+              }
+
+              {:reply, :error, encode_reply(socket, reply), {state, socket}}
+          end
         end
 
       _ ->

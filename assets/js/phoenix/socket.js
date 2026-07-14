@@ -179,8 +179,8 @@ export default class Socket {
         this.connect()
       })
     }, this.reconnectAfterMs)
-    /** @type{string | undefined} */
-    this.authToken = opts.authToken
+    /** @type{(() => string) | undefined} */
+    this.authToken = opts.authToken && closure(opts.authToken)
   }
 
   /**
@@ -386,7 +386,7 @@ export default class Socket {
     // Sec-WebSocket-Protocol based token
     // (longpoll uses Authorization header instead)
     if(this.authToken){
-      protocols = ["phoenix", `${AUTH_TOKEN_PREFIX}${btoa(this.authToken).replace(/=/g, "")}`]
+      protocols = ["phoenix", `${AUTH_TOKEN_PREFIX}${btoa(this.authToken()).replace(/=/g, "")}`]
     }
     this.conn = new this.transport(this.endPointURL(), protocols)
     this.conn.binaryType = this.binaryType

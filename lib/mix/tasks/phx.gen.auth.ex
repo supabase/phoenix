@@ -20,12 +20,12 @@ defmodule Mix.Tasks.Phx.Gen.Auth do
 
   Will generate an `Identity` context with `Client` and `ClientToken` inside.
   Additional information and security considerations are detailed in the
-  [`mix phx.gen.auth` guide](mix_phx_gen_auth.html).
+  [`mix phx.gen.auth` guide](mix_phx_gen_auth.md).
 
   > #### A note on scopes {: .info}
   >
   > `mix phx.gen.auth` creates a scope named after the schema by default.
-  > You can read more about scopes in the [Scopes guide](scopes.html).
+  > You can read more about scopes in the [Scopes guide](scopes.md).
 
   ## LiveView vs conventional Controllers & Views
 
@@ -69,7 +69,7 @@ defmodule Mix.Tasks.Phx.Gen.Auth do
 
   The password hashing mechanism defaults to `bcrypt` for
   Unix systems and `pbkdf2` for Windows systems. Both
-  systems use the [Comeonin interface](https://hexdocs.pm/comeonin/).
+  systems use the [Comeonin interface](https://comeonin.hexdocs.pm/).
 
   The password hashing mechanism can be overridden with the
   `--hashing-lib` option. The following values are supported:
@@ -138,7 +138,7 @@ defmodule Mix.Tasks.Phx.Gen.Auth do
   $ mix phx.gen.auth Accounts User users --scope app_user
   ```
 
-  This will generate a scope named `app_user` instead of `user`. You can read more about scopes in the [Scopes guide](scopes.html).
+  This will generate a scope named `app_user` instead of `user`. You can read more about scopes in the [Scopes guide](scopes.md).
 
   Additionally, the scope's assign key can be customized by passing the `--assign-key` option. For example:
 
