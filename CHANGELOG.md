@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5](https://github.com/supabase/phoenix/compare/phoenix-v0.4.4...phoenix-v0.4.5) (2026-07-15)
+
+
+### Bug Fixes
+
+* bump version after sync ([5efba44](https://github.com/supabase/phoenix/commit/5efba442bcd738201538451fbb3059f7ce655182))
+
 ## [0.4.4](https://github.com/supabase/phoenix/compare/phoenix-v0.4.3...phoenix-v0.4.4) (2026-06-17)
 
 
