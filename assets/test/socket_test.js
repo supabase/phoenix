@@ -974,6 +974,24 @@ describe("with transports", function (){
       socket.onConnOpen()
       expect(spy).toHaveBeenCalledTimes(1)
     })
+
+    it("clears a stale pendingHeartbeatRef even when autoSendHeartbeat is false", function (){
+      // autoSendHeartbeat: false mirrors RealtimeClient's `worker: true` configuration,
+      // where an external driver (e.g. a Worker) sends heartbeats instead of the socket's
+      // own timer. onConnOpen() must still clear any pendingHeartbeatRef stranded by the
+      // previous connection, or the next externally-driven heartbeat on this new, healthy
+      // connection takes the timeout branch and force-closes it without ever sending a frame.
+      const autoSocket = new Socket("/socket", {
+        reconnectAfterMs: () => 100000,
+        autoSendHeartbeat: false
+      })
+      autoSocket.connect()
+      autoSocket.pendingHeartbeatRef = "stale-ref-from-previous-connection"
+
+      autoSocket.onConnOpen()
+
+      expect(autoSocket.pendingHeartbeatRef).toBeNull()
+    })
   })
 
   describe("onConnClose", function (){
