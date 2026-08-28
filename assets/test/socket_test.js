@@ -145,6 +145,43 @@ describe("with transports", function (){
     })
   })
 
+  describe("resume", function (){
+    // Chrome does not reliably fire visibilitychange when a frozen page is
+    // resumed, see https://issues.chromium.org/issues/547062449.
+    it("reconnects on resume after unclean close", function (){
+      socket = new Socket("/socket")
+      socket.closeWasClean = false
+      const teardownSpy = jest.spyOn(socket, "teardown")
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      document.dispatchEvent(new Event("resume"))
+
+      expect(teardownSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not reconnect on resume while the page is still hidden", function (){
+      socket = new Socket("/socket")
+      socket.closeWasClean = false
+      const teardownSpy = jest.spyOn(socket, "teardown")
+
+      Object.defineProperty(document, "visibilityState", {value: "hidden", writable: true})
+      document.dispatchEvent(new Event("resume"))
+
+      expect(teardownSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not reconnect on resume after clean close", function (){
+      socket = new Socket("/socket")
+      socket.closeWasClean = true
+      const teardownSpy = jest.spyOn(socket, "teardown")
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      document.dispatchEvent(new Event("resume"))
+
+      expect(teardownSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe("protocol", function (){
     beforeEach(function (){
       socket = new Socket("/socket")
@@ -973,6 +1010,21 @@ describe("with transports", function (){
       socket.onOpen(spy)
       socket.onConnOpen()
       expect(spy).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe("heartbeatTimeout", function (){
+    it("triggers channel error with the heartbeat timeout reason", function (){
+      socket = new Socket("/socket")
+      const channel = socket.channel("topic")
+      const triggerSpy = jest.spyOn(channel, "trigger")
+      jest.spyOn(socket, "teardown").mockImplementation(() => {})
+
+      channel.join().trigger("ok", {})
+      socket.pendingHeartbeatRef = "1"
+      socket.heartbeatTimeout()
+
+      expect(triggerSpy).toHaveBeenCalledWith("phx_error", new Error("heartbeat timeout"))
     })
   })
 
