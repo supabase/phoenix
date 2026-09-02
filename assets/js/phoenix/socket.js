@@ -460,6 +460,14 @@ export default class Socket {
     this.establishedConnections++
     this.flushSendBuffer()
     this.reconnectTimer.reset()
+    // Clear any pendingHeartbeatRef stranded by the previous connection unconditionally,
+    // even when autoSendHeartbeat is false (e.g. RealtimeClient's `worker: true` mode,
+    // where heartbeats are driven externally rather than by this socket's own timer).
+    // Without this, a ref left pending by a drop-with-beat-in-flight survives onto this
+    // new, healthy connection, whose first heartbeat then incorrectly takes the timeout
+    // branch and force-closes it having sent zero frames.
+    this.pendingHeartbeatRef = null
+    this.heartbeatSentAt = null
     if(this.autoSendHeartbeat){
       this.resetHeartbeat()
     }
