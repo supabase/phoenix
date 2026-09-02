@@ -118,7 +118,31 @@ export default class Socket {
           this.pageHidden = false
           // reconnect immediately
           if(!this.isConnected() && !this.closeWasClean){
-            this.teardown(() => this.connect())
+            this.teardown(async () => {
+              if(opts.beforeReconnect){
+                try {
+                  // Bound the wait with the socket's own timeout: on wake the
+                  // network is often not usable yet and the hook has no timeout
+                  // of its own. Reconnecting with a stale token still recovers;
+                  // not reconnecting at all does not.
+                  await Promise.race([
+                    opts.beforeReconnect(),
+                    new Promise(resolve => setTimeout(resolve, this.timeout))
+                  ])
+                } catch (e){
+                  // A failing beforeReconnect must not block the reconnect. This
+                  // listener is the only path that can revive a socket which died
+                  // while the page was hidden, because reconnectTimer bails out
+                  // without rescheduling in that case.
+                  this.log("error", "error in beforeReconnect callback", e)
+                }
+              }
+              // State can change while awaiting: the page may have been hidden
+              // again, the socket may have been disconnected, or beforeReconnect
+              // may have reconnected it already.
+              if(this.pageHidden || this.closeWasClean || this.disconnecting || this.isConnected()){ return }
+              this.connect()
+            })
           }
         }
       })

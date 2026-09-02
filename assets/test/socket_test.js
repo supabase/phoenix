@@ -143,6 +143,105 @@ describe("with transports", function (){
 
       expect(teardownSpy).not.toHaveBeenCalled()
     })
+
+    it("awaits beforeReconnect before reconnecting on visibility change", async function (){
+      const order = []
+      let releaseBeforeReconnect
+      const pending = new Promise(resolve => { releaseBeforeReconnect = resolve })
+      socket = new Socket("/socket", {beforeReconnect: () => { order.push("beforeReconnect"); return pending }})
+      socket.closeWasClean = false
+      jest.spyOn(socket, "connect").mockImplementation(() => { order.push("connect") })
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+      await Promise.resolve()
+
+      expect(order).toEqual(["beforeReconnect"])
+
+      releaseBeforeReconnect()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(order).toEqual(["beforeReconnect", "connect"])
+    })
+
+    it("connects synchronously on visibility change when beforeReconnect is not provided", function (){
+      socket = new Socket("/socket")
+      socket.closeWasClean = false
+      const connectSpy = jest.spyOn(socket, "connect").mockImplementation(() => { })
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+
+      expect(connectSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("reconnects on visibility change even if beforeReconnect rejects", async function (){
+      socket = new Socket("/socket", {beforeReconnect: () => Promise.reject(new Error("no network yet"))})
+      socket.closeWasClean = false
+      const connectSpy = jest.spyOn(socket, "connect").mockImplementation(() => { })
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(connectSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("reconnects on visibility change even if beforeReconnect never settles", async function (){
+      jest.useFakeTimers()
+      socket = new Socket("/socket", {beforeReconnect: () => new Promise(() => { })})
+      socket.closeWasClean = false
+      const connectSpy = jest.spyOn(socket, "connect").mockImplementation(() => { })
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+      await Promise.resolve()
+
+      expect(connectSpy).not.toHaveBeenCalled()
+
+      await jest.advanceTimersByTimeAsync(socket.timeout)
+
+      expect(connectSpy).toHaveBeenCalledTimes(1)
+      jest.useRealTimers()
+    })
+
+    it("does not connect if the page is hidden again while beforeReconnect is pending", async function (){
+      let releaseBeforeReconnect
+      const pending = new Promise(resolve => { releaseBeforeReconnect = resolve })
+      socket = new Socket("/socket", {beforeReconnect: () => pending})
+      socket.closeWasClean = false
+      const connectSpy = jest.spyOn(socket, "connect").mockImplementation(() => { })
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+
+      Object.defineProperty(document, "visibilityState", {value: "hidden", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+
+      releaseBeforeReconnect()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(connectSpy).not.toHaveBeenCalled()
+    })
+
+    it("does not connect if the socket is disconnected while beforeReconnect is pending", async function (){
+      let releaseBeforeReconnect
+      const pending = new Promise(resolve => { releaseBeforeReconnect = resolve })
+      socket = new Socket("/socket", {beforeReconnect: () => pending})
+      socket.closeWasClean = false
+      const connectSpy = jest.spyOn(socket, "connect").mockImplementation(() => { })
+
+      Object.defineProperty(document, "visibilityState", {value: "visible", writable: true})
+      window.dispatchEvent(new Event("visibilitychange"))
+
+      socket.disconnect()
+
+      releaseBeforeReconnect()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      expect(connectSpy).not.toHaveBeenCalled()
+    })
+
   })
 
   describe("protocol", function (){
