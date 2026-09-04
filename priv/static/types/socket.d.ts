@@ -6,13 +6,110 @@ export default class Socket {
      *
      * For IE8 support use an ES5-shim (https://github.com/es-shims/es5-shim)
      *
-     * @constructor
      * @param {string} endPoint - The string WebSocket endpoint, ie, `"ws://example.com/socket"`,
      *                                               `"wss://example.com"`
      *                                               `"/socket"` (inherited host & protocol)
-     * @param {SocketOptions} [opts] - Optional configuration
-     */
-    constructor(endPoint: string, opts?: SocketOptions);
+     * @param {Object} [opts] - Optional configuration
+     * @param {Function} [opts.transport] - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
+     *
+     * Defaults to WebSocket with automatic LongPoll fallback if WebSocket is not defined.
+     * To fallback to LongPoll when WebSocket attempts fail, use `longPollFallbackMs: 2500`.
+     *
+     * @param {number} [opts.longPollFallbackMs] - The millisecond time to attempt the primary transport
+     * before falling back to the LongPoll transport. Disabled by default.
+     *
+     * @param {boolean} [opts.debug] - When true, enables debug logging. Default false.
+     *
+     * @param {Function} [opts.encode] - The function to encode outgoing messages.
+     *
+     * Defaults to JSON encoder.
+     *
+     * @param {Function} [opts.decode] - The function to decode incoming messages.
+     *
+     * Defaults to JSON:
+     *
+     * ```javascript
+     * (payload, callback) => callback(JSON.parse(payload))
+     * ```
+     *
+     * @param {number} [opts.timeout] - The default timeout in milliseconds to trigger push timeouts.
+     *
+     * Defaults `DEFAULT_TIMEOUT`
+     * @param {number} [opts.heartbeatIntervalMs] - The millisec interval to send a heartbeat message
+     * @param {Function} [opts.reconnectAfterMs] - The optional function that returns the
+     * socket reconnect interval, in milliseconds.
+     *
+     * Defaults to stepped backoff of:
+     *
+     * ```javascript
+     * function(tries){
+     *   return [10, 50, 100, 150, 200, 250, 500, 1000, 2000][tries - 1] || 5000
+     * }
+     * ````
+     *
+     * @param {Function} [opts.rejoinAfterMs] - The optional function that returns the millisec
+     * rejoin interval for individual channels.
+     *
+     * ```javascript
+     * function(tries){
+     *   return [1000, 2000, 5000][tries - 1] || 10000
+     * }
+     * ````
+     *
+     * @param {Function} [opts.logger] - The optional function for specialized logging, ie:
+     *
+     * ```javascript
+     * function(kind, msg, data) {
+     *   console.log(`${kind}: ${msg}`, data)
+     * }
+     * ```
+     *
+     * @param {number} [opts.longpollerTimeout] - The maximum timeout of a long poll AJAX request.
+     *
+     * Defaults to 20s (double the server long poll timer).
+     *
+     * @param {(Object|function)} [opts.params] - The optional params to pass when connecting
+     * @param {(string|function)} [opts.authToken] - the optional authentication token to be exposed on the server
+     * under the `:auth_token` connect_info key. Can be a string or a function that returns a string.
+     * @param {string} [opts.binaryType] - The binary type to use for binary WebSocket frames.
+     *
+     * Defaults to "arraybuffer"
+     *
+     * @param {vsn} [opts.vsn] - The serializer's protocol version to send on connect.
+     *
+     * Defaults to DEFAULT_VSN.
+     *
+     * @param {Object} [opts.sessionStorage] - An optional Storage compatible object
+     * Phoenix uses sessionStorage for longpoll fallback history. Overriding the store is
+     * useful when Phoenix won't have access to `sessionStorage`. For example, This could
+     * happen if a site loads a cross-domain channel in an iframe. Example usage:
+     *
+     *     class InMemoryStorage {
+     *       constructor() { this.storage = {} }
+     *       getItem(keyName) { return this.storage[keyName] || null }
+     *       removeItem(keyName) { delete this.storage[keyName] }
+     *       setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
+     *     }
+     *
+    */
+    constructor(endPoint: string, opts?: {
+        transport?: Function | undefined;
+        longPollFallbackMs?: number | undefined;
+        debug?: boolean | undefined;
+        encode?: Function | undefined;
+        decode?: Function | undefined;
+        timeout?: number | undefined;
+        heartbeatIntervalMs?: number | undefined;
+        reconnectAfterMs?: Function | undefined;
+        rejoinAfterMs?: Function | undefined;
+        logger?: Function | undefined;
+        longpollerTimeout?: number | undefined;
+        params?: Object | Function | undefined;
+        authToken?: string | Function | undefined;
+        binaryType?: string | undefined;
+        vsn?: any;
+        sessionStorage?: Object | undefined;
+    });
     /** @type{SocketStateChangeCallbacks} */
     stateChangeCallbacks: SocketStateChangeCallbacks;
     /** @type{Channel[]} */
@@ -51,8 +148,6 @@ export default class Socket {
     binaryType: BinaryType;
     /** @type{number} */
     connectClock: number;
-    /** @type{boolean} */
-    pageHidden: boolean;
     /** @type{Encode<void>} */
     encode: Encode<void>;
     /** @type{Decode<void>} */
@@ -89,6 +184,14 @@ export default class Socket {
     reconnectTimer: Timer;
     /** @type{(() => string) | undefined} */
     authToken: (() => string) | undefined;
+    /**
+     * @internal
+     */
+    get pageHidden(): boolean;
+    /**
+     * @internal
+     */
+    handleVisibilityChange(): void;
     /**
      * Returns the LongPoll transport reference
      */
@@ -145,9 +248,9 @@ export default class Socket {
      *
      * @example socket.onOpen(function(){ console.info("the socket was opened") })
      *
-     * @param {SocketOnOpen} callback
+     * @param {Function} callback
      */
-    onOpen(callback: SocketOnOpen): string;
+    onOpen(callback: Function): string;
     /**
      * Registers callbacks for connection close events
      * @param {SocketOnClose} callback
@@ -282,10 +385,8 @@ import type { Params } from "./types";
 import type { Vsn } from "./types";
 import Timer from "./timer";
 import LongPoll from "./longpoll";
-import type { SocketOnOpen } from "./types";
 import type { SocketOnClose } from "./types";
 import type { SocketOnError } from "./types";
 import type { SocketOnMessage } from "./types";
 import type { Message } from "./types";
-import type { SocketOptions } from "./types";
 //# sourceMappingURL=socket.d.ts.map

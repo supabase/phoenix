@@ -154,6 +154,7 @@ var Push = class {
     if (this.timeoutTimer) {
       this.cancelTimeout();
     }
+    this.cancelRefEvent();
     this.ref = this.channel.socket.makeRef();
     this.refEvent = this.channel.replyEventName(this.ref);
     this.channel.on(this.refEvent, (payload) => {
@@ -753,7 +754,7 @@ var LongPoll = class {
     this.awaitingBatchAck = true;
     const next = offset + MAX_LONGPOLL_BATCH_SIZE;
     const batch = messages.slice(offset, next);
-    this.ajax("POST", { "Content-Type": "application/x-ndjson" }, batch.join("\n"), () => this.onerror("timeout"), (resp) => {
+    this.ajax("POST", { "Content-Type": "application/x-ndjson" }, batch.join("\n"), () => this.ontimeout(), (resp) => {
       if (!resp || resp.status !== 200) {
         this.awaitingBatchAck = false;
         this.onerror(resp && resp.status);
@@ -775,6 +776,7 @@ var LongPoll = class {
     this.readyState = SOCKET_STATES.closed;
     let opts = Object.assign({ code: 1e3, reason: void 0, wasClean: true }, { code, reason, wasClean });
     this.batchBuffer = [];
+    this.awaitingBatchAck = false;
     clearTimeout(this.currentBatchTimer);
     this.currentBatchTimer = null;
     if (typeof CloseEvent !== "undefined") {
@@ -1166,12 +1168,92 @@ var Socket = class {
    *
    * For IE8 support use an ES5-shim (https://github.com/es-shims/es5-shim)
    *
-   * @constructor
    * @param {string} endPoint - The string WebSocket endpoint, ie, `"ws://example.com/socket"`,
    *                                               `"wss://example.com"`
    *                                               `"/socket"` (inherited host & protocol)
-   * @param {SocketOptions} [opts] - Optional configuration
-   */
+   * @param {Object} [opts] - Optional configuration
+   * @param {Function} [opts.transport] - The Websocket Transport, for example WebSocket or Phoenix.LongPoll.
+   *
+   * Defaults to WebSocket with automatic LongPoll fallback if WebSocket is not defined.
+   * To fallback to LongPoll when WebSocket attempts fail, use `longPollFallbackMs: 2500`.
+   *
+   * @param {number} [opts.longPollFallbackMs] - The millisecond time to attempt the primary transport
+   * before falling back to the LongPoll transport. Disabled by default.
+   *
+   * @param {boolean} [opts.debug] - When true, enables debug logging. Default false.
+   *
+   * @param {Function} [opts.encode] - The function to encode outgoing messages.
+   *
+   * Defaults to JSON encoder.
+   *
+   * @param {Function} [opts.decode] - The function to decode incoming messages.
+   *
+   * Defaults to JSON:
+   *
+   * ```javascript
+   * (payload, callback) => callback(JSON.parse(payload))
+   * ```
+   *
+   * @param {number} [opts.timeout] - The default timeout in milliseconds to trigger push timeouts.
+   *
+   * Defaults `DEFAULT_TIMEOUT`
+   * @param {number} [opts.heartbeatIntervalMs] - The millisec interval to send a heartbeat message
+   * @param {Function} [opts.reconnectAfterMs] - The optional function that returns the
+   * socket reconnect interval, in milliseconds.
+   *
+   * Defaults to stepped backoff of:
+   *
+   * ```javascript
+   * function(tries){
+   *   return [10, 50, 100, 150, 200, 250, 500, 1000, 2000][tries - 1] || 5000
+   * }
+   * ````
+   *
+   * @param {Function} [opts.rejoinAfterMs] - The optional function that returns the millisec
+   * rejoin interval for individual channels.
+   *
+   * ```javascript
+   * function(tries){
+   *   return [1000, 2000, 5000][tries - 1] || 10000
+   * }
+   * ````
+   *
+   * @param {Function} [opts.logger] - The optional function for specialized logging, ie:
+   *
+   * ```javascript
+   * function(kind, msg, data) {
+   *   console.log(`${kind}: ${msg}`, data)
+   * }
+   * ```
+   *
+   * @param {number} [opts.longpollerTimeout] - The maximum timeout of a long poll AJAX request.
+   *
+   * Defaults to 20s (double the server long poll timer).
+   *
+   * @param {(Object|function)} [opts.params] - The optional params to pass when connecting
+   * @param {(string|function)} [opts.authToken] - the optional authentication token to be exposed on the server
+   * under the `:auth_token` connect_info key. Can be a string or a function that returns a string.
+   * @param {string} [opts.binaryType] - The binary type to use for binary WebSocket frames.
+   *
+   * Defaults to "arraybuffer"
+   *
+   * @param {vsn} [opts.vsn] - The serializer's protocol version to send on connect.
+   *
+   * Defaults to DEFAULT_VSN.
+   *
+   * @param {Object} [opts.sessionStorage] - An optional Storage compatible object
+   * Phoenix uses sessionStorage for longpoll fallback history. Overriding the store is
+   * useful when Phoenix won't have access to `sessionStorage`. For example, This could
+   * happen if a site loads a cross-domain channel in an iframe. Example usage:
+   *
+   *     class InMemoryStorage {
+   *       constructor() { this.storage = {} }
+   *       getItem(keyName) { return this.storage[keyName] || null }
+   *       removeItem(keyName) { delete this.storage[keyName] }
+   *       setItem(keyName, keyValue) { this.storage[keyName] = keyValue }
+   *     }
+   *
+  */
   constructor(endPoint, opts = {}) {
     this.stateChangeCallbacks = { open: [], close: [], error: [], message: [] };
     this.channels = [];
@@ -1197,7 +1279,6 @@ var Socket = class {
     this.disconnecting = false;
     this.binaryType = opts.binaryType || "arraybuffer";
     this.connectClock = 1;
-    this.pageHidden = false;
     this.encode = void 0;
     this.decode = void 0;
     if (this.transport !== LongPoll) {
@@ -1222,14 +1303,10 @@ var Socket = class {
         }
       });
       phxWindow.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") {
-          this.pageHidden = true;
-        } else {
-          this.pageHidden = false;
-          if (!this.isConnected() && !this.closeWasClean) {
-            this.teardown(() => this.connect());
-          }
-        }
+        this.handleVisibilityChange();
+      });
+      phxWindow.document && phxWindow.document.addEventListener("resume", () => {
+        this.handleVisibilityChange();
       });
     }
     this.heartbeatIntervalMs = opts.heartbeatIntervalMs || 3e4;
@@ -1276,6 +1353,22 @@ var Socket = class {
       });
     }, this.reconnectAfterMs);
     this.authToken = opts.authToken && closure(opts.authToken);
+  }
+  /**
+   * @internal
+   */
+  get pageHidden() {
+    return phxWindow && phxWindow.document ? phxWindow.document.visibilityState === "hidden" : false;
+  }
+  /**
+   * @internal
+   */
+  handleVisibilityChange() {
+    if (!this.pageHidden) {
+      if (!this.isConnected() && !this.closeWasClean) {
+        this.teardown(() => this.connect());
+      }
+    }
   }
   /**
    * Returns the LongPoll transport reference
@@ -1386,7 +1479,7 @@ var Socket = class {
    *
    * @example socket.onOpen(function(){ console.info("the socket was opened") })
    *
-   * @param {SocketOnOpen} callback
+   * @param {Function} callback
    */
   onOpen(callback) {
     let ref = this.makeRef();
