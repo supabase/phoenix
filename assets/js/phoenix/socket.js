@@ -460,6 +460,8 @@ export default class Socket {
     this.establishedConnections++
     this.flushSendBuffer()
     this.reconnectTimer.reset()
+    this.pendingHeartbeatRef = null
+    this.heartbeatSentAt = null
     if(this.autoSendHeartbeat){
       this.resetHeartbeat()
     }
