@@ -18,7 +18,7 @@ env:
 jobs:
   tests:
     name: Realtime (${{ matrix.postgres }} - Partition ${{ matrix.partition }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       POSTGRES_IMAGE: ${{ matrix.postgres_image }}
       DB_USER_REALTIME: ${{ matrix.db_user_realtime }}
@@ -49,7 +49,7 @@ jobs:
 
       - name: Setup elixir
         id: beam
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764 # v1.23.0
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           otp-version: 28.x
           elixir-version: 1.19.x
