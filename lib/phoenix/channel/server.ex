@@ -2,6 +2,8 @@ defmodule Phoenix.Channel.Server do
   @moduledoc false
   use GenServer, restart: :temporary
 
+  @behaviour Phoenix.PubSub.Sender
+
   require Logger
 
   alias Phoenix.PubSub
@@ -89,52 +91,80 @@ defmodule Phoenix.Channel.Server do
   ## Channel API
 
   @doc """
-  Hook invoked by Phoenix.PubSub dispatch.
+  Hook invoked by Phoenix.PubSub to deliver a message to a channel subscription.
+
+  Broadcasts not intercepted by the channel are encoded once per
+  serializer and sent directly to the transport process.
+
+  This function runs in the broadcasting process or in a PubSub worker.
+  If the serializer raises, the error is logged and the channels of
+  subscribers using that serializer are stopped. Their clients receive
+  a `phx_error` and rejoin, instead of missing the message.
   """
-  def dispatch(subscribers, from, %Broadcast{event: event} = msg) do
-    Enum.reduce(subscribers, %{}, fn
-      {pid, _}, cache when pid == from ->
-        cache
-
-      {pid, {:fastlane, fastlane_pid, serializer, event_intercepts}}, cache ->
-        if event in event_intercepts do
-          send(pid, msg)
+  def send(pid, {transport_pid, serializer, intercepts}, %Broadcast{event: event} = msg, cache) do
+    if event in intercepts do
+      send(pid, msg)
+      cache
+    else
+      case cache do
+        %{^serializer => :fastlane_error} ->
+          send(pid, {__MODULE__, :fastlane_error})
           cache
-        else
-          case cache do
-            %{^serializer => encoded_msg} ->
-              send(fastlane_pid, encoded_msg)
-              cache
 
-            %{} ->
-              encoded_msg = serializer.fastlane!(msg)
-              send(fastlane_pid, encoded_msg)
-              Map.put(cache, serializer, encoded_msg)
+        %{^serializer => encoded_msg} ->
+          send(transport_pid, encoded_msg)
+          cache
+
+        _ ->
+          case fastlane(serializer, msg) do
+            {:ok, encoded_msg} ->
+              send(transport_pid, encoded_msg)
+              Map.put(cache || %{}, serializer, encoded_msg)
+
+            :error ->
+              send(pid, {__MODULE__, :fastlane_error})
+              Map.put(cache || %{}, serializer, :fastlane_error)
           end
-        end
-
-      {pid, _}, cache ->
-        send(pid, msg)
-        cache
-    end)
-
-    :ok
-  end
-
-  def dispatch(entries, :none, message) do
-    for {pid, _} <- entries do
-      send(pid, message)
+      end
     end
-
-    :ok
   end
 
+  def send(pid, _meta, msg, cache) do
+    send(pid, msg)
+    cache
+  end
+
+  defp fastlane(serializer, msg) do
+    case serializer.fastlane!(msg) do
+      # Flatten so every subscriber shares one binary
+      # instead of getting its own copy of the iodata.
+      {:socket_push, opcode, payload} ->
+        {:ok, {:socket_push, opcode, IO.iodata_to_binary(payload)}}
+
+      encoded ->
+        {:ok, encoded}
+    end
+  catch
+    kind, reason ->
+      Logger.error("""
+      Stopping channels on topic #{inspect(msg.topic)} that use #{inspect(serializer)}, \
+      because the serializer failed to encode a broadcast (event #{inspect(msg.event)}):
+
+      #{Exception.format(kind, reason, __STACKTRACE__)}\
+      """)
+
+      :error
+  end
+
+  # TODO: Remove in Phoenix 1.10
+  #
+  # Nodes running Phoenix 1.8 broadcast with this module as dispatcher,
+  # so it is still invoked for broadcasts coming from those nodes.
+  # Subscriptions carry their own sender, so we delegate to the default
+  # dispatching.
+  @doc false
   def dispatch(entries, from, message) do
-    for {pid, _} <- entries, pid != from do
-      send(pid, message)
-    end
-
-    :ok
+    PubSub.dispatch(entries, from, message)
   end
 
   @doc """
@@ -151,7 +181,7 @@ defmodule Phoenix.Channel.Server do
       payload: payload
     }
 
-    PubSub.broadcast(pubsub_server, topic, broadcast, __MODULE__)
+    PubSub.broadcast(pubsub_server, topic, broadcast)
   end
 
   @doc """
@@ -168,7 +198,7 @@ defmodule Phoenix.Channel.Server do
       payload: payload
     }
 
-    PubSub.broadcast!(pubsub_server, topic, broadcast, __MODULE__)
+    PubSub.broadcast!(pubsub_server, topic, broadcast)
   end
 
   @doc """
@@ -185,7 +215,7 @@ defmodule Phoenix.Channel.Server do
       payload: payload
     }
 
-    PubSub.broadcast_from(pubsub_server, from, topic, broadcast, __MODULE__)
+    PubSub.broadcast_from(pubsub_server, from, topic, broadcast)
   end
 
   @doc """
@@ -202,7 +232,7 @@ defmodule Phoenix.Channel.Server do
       payload: payload
     }
 
-    PubSub.broadcast_from!(pubsub_server, from, topic, broadcast, __MODULE__)
+    PubSub.broadcast_from!(pubsub_server, from, topic, broadcast)
   end
 
   @doc """
@@ -219,7 +249,7 @@ defmodule Phoenix.Channel.Server do
       payload: payload
     }
 
-    PubSub.local_broadcast(pubsub_server, topic, broadcast, __MODULE__)
+    PubSub.local_broadcast(pubsub_server, topic, broadcast)
   end
 
   @doc """
@@ -236,7 +266,7 @@ defmodule Phoenix.Channel.Server do
       payload: payload
     }
 
-    PubSub.local_broadcast_from(pubsub_server, from, topic, broadcast, __MODULE__)
+    PubSub.local_broadcast_from(pubsub_server, from, topic, broadcast)
   end
 
   @doc """
@@ -353,6 +383,13 @@ defmodule Phoenix.Channel.Server do
     |> handle_result(:handle_out)
   end
 
+  # send/4 failed to encode a broadcast for this channel and logged the error.
+  # We stop without handle_result/2, which would send phx_close for a shutdown
+  # reason. The transport sends phx_error instead, so the client rejoins.
+  def handle_info({__MODULE__, :fastlane_error}, socket) do
+    {:stop, {:shutdown, :fastlane_error}, socket}
+  end
+
   def handle_info({:DOWN, ref, _, _, reason}, ref) do
     {:stop, reason, ref}
   end
@@ -440,8 +477,8 @@ defmodule Phoenix.Channel.Server do
     end
 
     Process.monitor(transport_pid)
-    fastlane = {:fastlane, transport_pid, serializer, channel.__intercepts__()}
-    PubSub.subscribe(pubsub_server, topic, metadata: fastlane)
+    sender = {__MODULE__, {transport_pid, serializer, channel.__intercepts__()}}
+    PubSub.subscribe(pubsub_server, topic, sender: sender)
 
     {:noreply, %{socket | joined: true}}
   end

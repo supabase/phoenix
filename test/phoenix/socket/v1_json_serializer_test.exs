@@ -24,7 +24,7 @@ defmodule Phoenix.Socket.V1.JSONSerializerTest do
     msg = %Message{topic: "t", event: "e", payload: "m"}
     encoded = encode!(@serializer, msg)
 
-    assert Jason.decode!(encoded) == %{
+    assert Phoenix.json_library().decode!(encoded) == %{
              "event" => "e",
              "payload" => "m",
              "ref" => nil,
@@ -36,7 +36,7 @@ defmodule Phoenix.Socket.V1.JSONSerializerTest do
     msg = %Reply{topic: "t", ref: "null"}
     encoded = encode!(@serializer, msg)
 
-    assert Jason.decode!(encoded) == %{
+    assert Phoenix.json_library().decode!(encoded) == %{
              "event" => "phx_reply",
              "payload" => %{"response" => nil, "status" => nil},
              "ref" => "null",
@@ -61,11 +61,29 @@ defmodule Phoenix.Socket.V1.JSONSerializerTest do
     msg = %Broadcast{topic: "t", event: "e", payload: "m"}
     encoded = fastlane!(@serializer, msg)
 
-    assert Jason.decode!(encoded) == %{
+    assert Phoenix.json_library().decode!(encoded) == %{
              "event" => "e",
              "payload" => "m",
              "ref" => nil,
              "topic" => "t"
            }
+  end
+
+  test "fastlane!/1 raises on binary payloads" do
+    msg = %Broadcast{topic: "t", event: "e", payload: {:binary, <<1, 2, 3>>}}
+
+    assert_raise ArgumentError, ~r/unable to send a binary payload on topic "t"/, fn ->
+      @serializer.fastlane!(msg)
+    end
+  end
+
+  test "encode!/1 raises on binary payloads" do
+    assert_raise ArgumentError, ~r/unable to send a binary payload on topic "t"/, fn ->
+      @serializer.encode!(%Message{topic: "t", event: "e", payload: {:binary, <<1>>}})
+    end
+
+    assert_raise ArgumentError, ~r/unable to send a binary payload on topic "t"/, fn ->
+      @serializer.encode!(%Reply{topic: "t", status: :ok, payload: {:binary, <<1>>}})
+    end
   end
 end

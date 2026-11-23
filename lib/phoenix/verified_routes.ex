@@ -182,6 +182,8 @@ defmodule Phoenix.VerifiedRoutes do
         def root, do: ~p"/"
       end
 
+  Note the path prefixes are taken as is and not encoded in any way.
+
   Finally, for even more complex use cases, where the whole URL needs to localized,
   see projects such as [`routex`](https://hex.pm/packages/routex) and
   [`ex_cldr_routes`](https://hex.pm/packages/ex_cldr_routes).
@@ -226,10 +228,16 @@ defmodule Phoenix.VerifiedRoutes do
     opts =
       if Keyword.keyword?(opts) do
         for {k, v} <- opts do
-          if Macro.quoted_literal?(v) do
-            {k, Macro.prewalk(v, &expand_alias(&1, __CALLER__))}
-          else
-            {k, v}
+          cond do
+            Macro.quoted_literal?(v) ->
+              {k, Macro.prewalk(v, &expand_alias(&1, __CALLER__))}
+
+            k == :router ->
+              raise ArgumentError,
+                    ":router option in VerifiedRoutes must be a literal module, got: #{Macro.to_string(v)}"
+
+            true ->
+              {k, v}
           end
         end
       else
@@ -315,9 +323,12 @@ defmodule Phoenix.VerifiedRoutes do
       test_path = split_test_path(route.test_path)
 
       unless route.router.verified_route?([], test_path) do
+        # The file is stored relative to the project, so expand it against the
+        # current directory here, where the warning is emitted. Mix persists
+        # warnings by their absolute source path and drops relative ones.
         IO.warn(
           "no route path for #{inspect(route.router)} matches #{route.inspected_route}",
-          route.warn_location
+          Keyword.update!(route.warn_location, :file, &Path.expand/1)
         )
       end
     end)
@@ -589,8 +600,11 @@ defmodule Phoenix.VerifiedRoutes do
 
   def static_url(%Plug.Conn{private: private}, path) do
     case private do
-      %{phoenix_static_url: static_url} -> concat_url(static_url, path)
-      %{phoenix_endpoint: endpoint} -> static_url(endpoint, path)
+      %{phoenix_static_url: static_url} ->
+        concat_url(static_url, Phoenix.URL.validate_local_path!(path))
+
+      %{phoenix_endpoint: endpoint} ->
+        static_url(endpoint, path)
     end
   end
 
@@ -621,7 +635,11 @@ defmodule Phoenix.VerifiedRoutes do
   """
   def unverified_url(conn_or_socket_or_endpoint_or_uri, path, params \\ %{})
       when (is_map(params) or is_list(params)) and is_binary(path) do
-    guarded_unverified_url(conn_or_socket_or_endpoint_or_uri, path, params)
+    guarded_unverified_url(
+      conn_or_socket_or_endpoint_or_uri,
+      validate_unverified_path!(path),
+      params
+    )
   end
 
   defp guarded_unverified_url(%Plug.Conn{private: private}, path, params) do
@@ -648,6 +666,12 @@ defmodule Phoenix.VerifiedRoutes do
           "expected a %Plug.Conn{}, a %Phoenix.Socket{}, a %URI{}, a struct with an :endpoint key, " <>
             "or a Phoenix.Endpoint when building url at #{path}, got: #{inspect(other)}"
   end
+
+  # Unlike the other path helpers, "" is meaningful here: it is how the router
+  # helpers ask for the endpoint URL itself. Every other value is validated as
+  # we do in other places.
+  defp validate_unverified_path!(""), do: ""
+  defp validate_unverified_path!(path), do: Phoenix.URL.validate_local_path!(path)
 
   defp concat_url(url, path) when is_binary(path), do: url <> path
 
@@ -678,13 +702,13 @@ defmodule Phoenix.VerifiedRoutes do
 
   def static_path(%Plug.Conn{private: private}, path) do
     case private do
-      %{phoenix_static_url: _} -> path
+      %{phoenix_static_url: _} -> Phoenix.URL.validate_local_path!(path)
       %{phoenix_endpoint: endpoint} -> endpoint.static_path(path)
     end
   end
 
   def static_path(%URI{} = uri, path) do
-    (uri.path || "") <> path
+    (uri.path || "") <> Phoenix.URL.validate_local_path!(path)
   end
 
   def static_path(%_{endpoint: endpoint}, path) do
@@ -707,8 +731,16 @@ defmodule Phoenix.VerifiedRoutes do
       "/posts?page=1"
   """
   def unverified_path(conn_or_socket_or_endpoint_or_uri, router, path, params \\ %{})
+      when (is_map(params) or is_list(params)) and is_binary(path) do
+    guarded_unverified_path(
+      conn_or_socket_or_endpoint_or_uri,
+      router,
+      validate_unverified_path!(path),
+      params
+    )
+  end
 
-  def unverified_path(%Plug.Conn{} = conn, router, path, params) do
+  defp guarded_unverified_path(%Plug.Conn{} = conn, router, path, params) do
     conn
     |> build_own_forward_path(router, path)
     |> Kernel.||(build_conn_forward_path(conn, router, path))
@@ -716,19 +748,19 @@ defmodule Phoenix.VerifiedRoutes do
     |> append_params(params)
   end
 
-  def unverified_path(%URI{} = uri, _router, path, params) do
+  defp guarded_unverified_path(%URI{} = uri, _router, path, params) do
     append_params((uri.path || "") <> path, params)
   end
 
-  def unverified_path(%_{endpoint: endpoint}, router, path, params) do
-    unverified_path(endpoint, router, path, params)
+  defp guarded_unverified_path(%_{endpoint: endpoint}, router, path, params) do
+    guarded_unverified_path(endpoint, router, path, params)
   end
 
-  def unverified_path(endpoint, _router, path, params) when is_atom(endpoint) do
+  defp guarded_unverified_path(endpoint, _router, path, params) when is_atom(endpoint) do
     append_params(endpoint.path(path), params)
   end
 
-  def unverified_path(other, router, path, _params) do
+  defp guarded_unverified_path(other, router, path, _params) do
     raise ArgumentError,
           "expected a %Plug.Conn{}, a %Phoenix.Socket{}, a %URI{}, a struct with an :endpoint key, " <>
             "or a Phoenix.Endpoint when building path for #{inspect(router)} at #{path}, got: #{inspect(other)}"
@@ -957,6 +989,10 @@ defmodule Phoenix.VerifiedRoutes do
 
   defp warn_location(meta, %{line: line, file: file, function: function, module: module}) do
     column = if column = meta[:column], do: column + 2
+    # Relative to the project, so copies of the project (git worktrees,
+    # copy-on-write clones) that reuse the build point to their own files.
+    # It is expanded again when the warning is emitted, see __verify__/1.
+    file = Path.relative_to_cwd(file)
     [line: line, function: function, module: module, file: file, column: column]
   end
 

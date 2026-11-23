@@ -57,12 +57,26 @@ defmodule Phoenix.Socket.TransportTest do
   ## Check origin
 
   describe "check_origin/4" do
+    Application.put_env(:phoenix, __MODULE__.NilHostEndpoint,
+      url: [host: nil],
+      secret_key_base: @secret_key_base
+    )
+
+    defmodule NilHostEndpoint do
+      use Phoenix.Endpoint, otp_app: :phoenix
+    end
+
     defp check_origin(%Plug.Conn{} = conn, origin, opts) do
       conn = put_req_header(conn, "origin", origin)
       Transport.check_origin(conn, make_ref(), Endpoint, opts)
     end
 
-    defp check_origin(origin, opts), do: check_origin(conn(:get, "/"), origin, opts)
+    defp check_origin(endpoint, origin, opts) when is_atom(endpoint) do
+      conn = put_req_header(conn(:get, "/"), "origin", origin)
+      Transport.check_origin(conn, make_ref(), endpoint, opts)
+    end
+
+    defp check_origin(origin, opts), do: check_origin(Endpoint, origin, opts)
 
     test "does not check origin if disabled" do
       refute check_origin("/", check_origin: false).halted
@@ -75,15 +89,20 @@ defmodule Phoenix.Socket.TransportTest do
       assert conn.status == 403
     end
 
+    test "checks origin falls back to localhost when endpoint host is nil" do
+      start_supervised!(NilHostEndpoint)
+
+      refute check_origin(NilHostEndpoint, "https://localhost/", check_origin: true).halted
+      conn = check_origin(NilHostEndpoint, "https://another.com/", check_origin: true)
+      assert conn.halted
+      assert conn.status == 403
+    end
+
     test "checks origin from endpoint config" do
       refute check_origin("https://endpoint.com/", []).halted
       conn = check_origin("https://another.com/", [])
       assert conn.halted
       assert conn.status == 403
-    end
-
-    test "can get the host from system variables" do
-      refute check_origin("https://host.com", check_origin: true).halted
     end
 
     test "wildcard subdomains" do
@@ -237,6 +256,33 @@ defmodule Phoenix.Socket.TransportTest do
 
       # an allowed host
       refute check_origin("https://host.com/", check_origin: mfa).halted
+    end
+
+    test "does not share the origin policy between mounts of the same handler" do
+      # The helper above passes a fresh make_ref/0 as the handler on every
+      # call, so it never exercises the policy cache. A single handler mounted
+      # twice with different :check_origin options must not have the first
+      # mount's policy applied to the second.
+      handler = __MODULE__.MultiMount
+      mount_a = [check_origin: ["//a.example"]]
+      mount_b = [check_origin: ["//b.example"]]
+
+      check = fn origin, opts ->
+        conn(:get, "/")
+        |> put_req_header("origin", origin)
+        |> Transport.check_origin(handler, Endpoint, opts)
+      end
+
+      # Mount A is reached first and populates the cache.
+      refute check.("http://a.example", mount_a).halted
+
+      # Mount B must apply its own allowlist, not mount A's.
+      assert check.("http://a.example", mount_b).halted
+      refute check.("http://b.example", mount_b).halted
+
+      # Mount A keeps its own allowlist too.
+      refute check.("http://a.example", mount_a).halted
+      assert check.("http://b.example", mount_a).halted
     end
   end
 

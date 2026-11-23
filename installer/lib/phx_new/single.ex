@@ -21,11 +21,11 @@ defmodule Phx.New.Single do
      "phx_single/mix.exs.eex": "mix.exs",
      "phx_single/README.md.eex": "README.md",
      "phx_single/formatter.exs.eex": ".formatter.exs",
-     "phx_single/gitignore.eex": ".gitignore",
      "phx_test/support/conn_case.ex.eex": "test/support/conn_case.ex",
      "phx_single/test/test_helper.exs.eex": "test/test_helper.exs",
      "phx_test/controllers/error_json_test.exs.eex":
        "test/:lib_web_name/controllers/error_json_test.exs"},
+    {:text, :project, "phx_common/gitignore": ".gitignore"},
     {:keep, :web,
      "phx_web/controllers": "lib/:lib_web_name/controllers",
      "phx_test/controllers": "test/:lib_web_name/controllers"}
@@ -110,20 +110,11 @@ defmodule Phx.New.Single do
       %{project | in_umbrella?: false, project_path: base_path}
     end
     |> put_app()
-    |> put_root_app()
     |> put_web_app()
   end
 
   defp put_app(%Project{base_path: base_path} = project) do
     %{project | app_path: base_path}
-  end
-
-  defp put_root_app(%Project{app: app, opts: opts} = project) do
-    %{
-      project
-      | root_app: app,
-        root_mod: Module.concat([opts[:module] || Macro.camelize(app)])
-    }
   end
 
   defp put_web_app(%Project{app: app} = project) do

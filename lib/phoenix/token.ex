@@ -111,6 +111,7 @@ defmodule Phoenix.Token do
 
   @type max_age_opt :: {:max_age, pos_integer | :infinity}
   @type signed_at_opt :: {:signed_at, pos_integer}
+  @type encode_opt :: {:compressed, boolean} | {:local, boolean}
 
   @doc """
   Encodes and signs data into a token you can send to clients.
@@ -127,9 +128,14 @@ defmodule Phoenix.Token do
       If no value is provided, it will be set to the current time in milliseconds.
     * `:max_age` - the default maximum age in **seconds** of the token. Defaults to
       86400 seconds (1 day) and it may be overridden on `verify/4`.
+    * `:compressed` - compresses the encoded term. Defaults to `false`.
+    * `:local` - encodes the term in a format that is only decodable by
+      the current Erlang runtime instance. This option requires Erlang/OTP
+      26 or later and will fail on earlier versions. Defaults to `false`.
 
   """
-  @spec sign(context, binary, term, [shared_opt | max_age_opt | signed_at_opt]) :: binary
+  @spec sign(context, binary, term, [shared_opt | max_age_opt | signed_at_opt | encode_opt]) ::
+          binary
   def sign(context, salt, data, opts \\ []) when is_binary(salt) do
     context
     |> get_key_base()
@@ -153,13 +159,18 @@ defmodule Phoenix.Token do
       If no value is provided, it will be set to the current time in milliseconds.
     * `:max_age` - the default maximum age in **seconds** of the token. Defaults to
       86400 seconds (1 day) and it may be overridden on `decrypt/4`.
+    * `:compressed` - compresses the encoded term. Defaults to `false`.
+    * `:local` - encodes the term in a format that is only decodable by
+      the current Erlang runtime instance. This option requires Erlang/OTP
+      26 or later and will fail on earlier versions. Defaults to `false`.
 
   """
-  @spec encrypt(context, binary, term, [shared_opt | max_age_opt | signed_at_opt]) :: binary
-  def encrypt(context, secret, data, opts \\ []) when is_binary(secret) do
+  @spec encrypt(context, binary, term, [shared_opt | max_age_opt | signed_at_opt | encode_opt]) ::
+          binary
+  def encrypt(context, salt, data, opts \\ []) when is_binary(salt) do
     context
     |> get_key_base()
-    |> Plug.Crypto.encrypt(secret, data, opts)
+    |> Plug.Crypto.encrypt(salt, data, opts)
   end
 
   @doc """
@@ -241,10 +252,10 @@ defmodule Phoenix.Token do
       token by `encrypt/4`.
   """
   @spec decrypt(context, binary, binary, [shared_opt | max_age_opt]) :: term()
-  def decrypt(context, secret, token, opts \\ []) when is_binary(secret) do
+  def decrypt(context, salt, token, opts \\ []) when is_binary(salt) do
     context
     |> get_key_base()
-    |> Plug.Crypto.decrypt(secret, token, opts)
+    |> Plug.Crypto.decrypt(salt, token, opts)
   end
 
   ## Helpers

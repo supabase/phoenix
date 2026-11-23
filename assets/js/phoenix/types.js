@@ -136,6 +136,13 @@
  * }
  * ````
  *
+ * @property {boolean} [reconnectWhenHidden] - When true, the socket also reconnects while the
+ * page is hidden, for example in a background tab or on a sleeping phone.
+ *
+ * Defaults to false. The socket then waits until the page is visible again before it reconnects.
+ * This avoids reconnect attempts that stall on mobile devices and delay the connection after the
+ * device wakes up.
+ *
  * @property {(tries: number) => number} [rejoinAfterMs] - The optional function that returns the millisec
  * rejoin interval for individual channels.
  *

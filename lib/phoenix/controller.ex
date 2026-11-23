@@ -504,22 +504,17 @@ defmodule Phoenix.Controller do
     end
   end
 
-  @invalid_local_url_chars ["\\", "/%09", "/\t"]
-  defp validate_local_url("//" <> _ = to), do: raise_invalid_url(to)
+  defp validate_local_url(to) do
+    case Phoenix.URL.classify_local_path(to) do
+      :ok ->
+        to
 
-  defp validate_local_url("/" <> _ = to) do
-    if String.contains?(to, @invalid_local_url_chars) do
-      raise ArgumentError, "unsafe characters detected for local redirect in URL #{inspect(to)}"
-    else
-      to
+      {:error, :invalid} ->
+        raise ArgumentError, "the :to option in redirect expects a path but was #{inspect(to)}"
+
+      {:error, :unsafe} ->
+        raise ArgumentError, "unsafe characters detected for local redirect in URL #{inspect(to)}"
     end
-  end
-
-  defp validate_local_url(to), do: raise_invalid_url(to)
-
-  @spec raise_invalid_url(term()) :: no_return()
-  defp raise_invalid_url(url) do
-    raise ArgumentError, "the :to option in redirect expects a path but was #{inspect(url)}"
   end
 
   @doc """
@@ -1719,7 +1714,7 @@ defmodule Phoenix.Controller do
       %{"info" => "Welcome Back!"}
 
   """
-  @deprecated "get_flash/1 is deprecated. Use the @flash assign provided by the :fetch_flash plug"
+  @deprecated "Use the @flash assign provided by the :fetch_flash plug"
   def get_flash(conn) do
     Map.get(conn.assigns, :flash) ||
       raise ArgumentError, message: "flash not fetched, call fetch_flash/2"
@@ -1735,7 +1730,7 @@ defmodule Phoenix.Controller do
       "Welcome Back!"
 
   """
-  @deprecated "get_flash/2 is deprecated. Use Phoenix.Flash.get(@flash, key) instead"
+  @deprecated "Use Phoenix.Flash.get/2 instead"
   def get_flash(conn, key) do
     get_flash(conn)[flash_key(key)]
   end

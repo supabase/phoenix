@@ -3,9 +3,13 @@ on: [push, pull_request]
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   mix_test:
-    name: mix test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
+    name: mix test (Elixir ${{matrix.elixir}} | OTP ${{matrix.otp}})
 
     env:
       MIX_ENV: test
@@ -20,15 +24,18 @@ jobs:
           - elixir: "1.18.4"
             otp: "27.3.4.13"
 
-          - elixir: "1.19.5"
-            otp: "28.5.0.2"
+          - elixir: "1.20.5"
+            otp: "29.1.2"
             lint: true
 
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Elixir
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
@@ -42,9 +49,9 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+          key: mix-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-test-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+            mix-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-test-
 
       - name: Install dependencies
         run: mix deps.get --only test
@@ -52,15 +59,20 @@ jobs:
       - name: Remove compiled application files
         run: mix clean
 
-      - name: Compile & lint dependencies
+      - name: Compile & lint
         run: mix compile --warnings-as-errors
         if: ${{ matrix.lint }}
 
       - name: Run tests
         run: mix test
+        if: ${{ !matrix.lint }}
+
+      - name: Run tests & lint
+        run: mix test --warnings-as-errors
+        if: ${{ matrix.lint }}
 
   installer_test:
-    name: installer test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
+    name: installer test (Elixir ${{matrix.elixir}} | OTP ${{matrix.otp}})
 
     env:
       MIX_ENV: test
@@ -69,17 +81,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir: "1.17.3"
-            otp: "25.3.2.21"
+          - elixir: "1.18.4"
+            otp: "27.3.4.3"
 
-          - elixir: "1.19.5"
-            otp: "28.5.0.2"
+          - elixir: "1.20.5"
+            otp: "29.1.2"
 
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Elixir
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
@@ -93,9 +108,11 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+            installer/deps
+            installer/_build
+          key: mix-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-installer-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+            mix-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-installer-
 
       - name: Install installer dependencies
         run: mix deps.get
@@ -113,36 +130,22 @@ jobs:
 
   npm_test:
     name: npm test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Restore deps and _build cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: |
-            deps
-            _build
-          key: deps-${{ runner.os }}-npm-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            deps-${{ runner.os }}-npm
+          persist-credentials: false
 
       - name: Set up Node.js 24.x
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24.x
+          node-version: "24.x"
+          cache: "npm"
 
-      - name: Restore npm cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install locked npm dependencies
-        run: npm ci
+      - name: Install npm dependencies
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
@@ -150,47 +153,185 @@ jobs:
       - name: Run tests
         run: npm test
 
+  docs:
+    name: mix docs
+
+    env:
+      MIX_ENV: docs
+      elixir: "1.20.5"
+      otp: "29.1.2"
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: ${{ env.elixir }}
+          otp-version: ${{ env.otp }}
+
+      # the docs alias also builds the JavaScript documentation with npm
+      - name: Set up Node.js 24.x
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.x"
+          cache: "npm"
+
+      - name: Restore deps and _build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ env.otp }}-${{ env.elixir }}-docs-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            mix-${{ runner.os }}-${{ env.otp }}-${{ env.elixir }}-docs-
+
+      - name: Install dependencies
+        run: mix deps.get --only docs
+
+      - name: Build docs
+        run: mix docs --warnings-as-errors
+
   integration-test-elixir:
-    runs-on: ubuntu-latest
+    name: integration test [${{ matrix.service == 'none' && 'sqlite3 + no-db' || matrix.service }}] (Elixir ${{ matrix.versions.elixir }} | OTP ${{ matrix.versions.otp }})
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
 
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          # look for latest alpine image here: https://bob.hex.pm/docker
-          - elixir: "1.17.3"
-            otp: "25.3.2.21"
-            suffix: "alpine-3.22.4"
+        service: [postgresql, mysql, mssql, none]
+        versions:
+          - elixir: "1.18.4"
+            otp: "27.3.4.3"
 
-          - elixir: "1.19.5"
-            otp: "28.3.3"
-            suffix: "alpine-3.23.4"
+          # keep version in sync with integration_test/.env
+          - elixir: "1.20.5"
+            otp: "29.1.2"
 
-    container:
-      image: hexpm/elixir:${{ matrix.elixir }}-erlang-${{ matrix.otp }}-${{ matrix.suffix }}
-      env:
-        ELIXIR_ASSERT_TIMEOUT: 10000
-        PHX_CI: true
-    services:
-      postgres:
-        image: postgres
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_PASSWORD: postgres
-      mysql:
-        image: mysql
-        ports:
-          - 3306:3306
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      mssql:
-        image: mcr.microsoft.com/mssql/server:2019-latest
-        env:
-          ACCEPT_EULA: Y
-          SA_PASSWORD: some!Password
-        ports:
-          - 1433:1433
+    env:
+      ELIXIR_ASSERT_TIMEOUT: 10000
+      PHX_CI: true
+
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Run test script
-        run: ./integration_test/test.sh
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure runner concurrency
+        run: |
+          CORES=$(nproc)
+          HALF_CORES=$(( CORES > 2 ? CORES / 2 : 2 ))
+          echo "CORES=$CORES" >> "$GITHUB_ENV"
+          echo "HALF_CORES=$HALF_CORES" >> "$GITHUB_ENV"
+          # Set to half of the runner vCPU cores to compile deps/NIFs
+          # concurrently across OS processes without CPU oversubscription.
+          # See https://elixir-lang.org/blog/2025/10/16/elixir-v1-19-0-released/
+          echo "MIX_OS_DEPS_COMPILE_PARTITION_COUNT=$HALF_CORES" >> "$GITHUB_ENV"
+          echo "MAKEFLAGS=-j$HALF_CORES" >> "$GITHUB_ENV"
+
+      - name: Mount installer/tmp on tmpfs
+        run: |
+          mkdir -p installer/tmp
+          sudo mount -t tmpfs -o size=4G,uid=$(id -u),gid=$(id -g) tmpfs installer/tmp
+
+      - name: Start database container (${{ matrix.service }})
+        if: matrix.service != 'none'
+        working-directory: integration_test
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d --wait ${{ matrix.service }}
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: ${{ matrix.versions.elixir }}
+          otp-version: ${{ matrix.versions.otp }}
+
+      - name: Restore deps and _build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            integration_test/deps
+            integration_test/_build
+          key: mix-${{ runner.os }}-${{ matrix.versions.otp }}-${{ matrix.versions.elixir }}-integration-${{ hashFiles('integration_test/mix.lock') }}
+          restore-keys: |
+            mix-${{ runner.os }}-${{ matrix.versions.otp }}-${{ matrix.versions.elixir }}-integration-
+
+      - name: Install dependencies
+        working-directory: integration_test
+        run: mix deps.get
+
+      - name: Compile dependencies
+        working-directory: integration_test
+        run: mix deps.compile
+        env:
+          MIX_ENV: test
+
+      - name: Run integration tests
+        working-directory: integration_test
+        run: |
+          if [ "${{ matrix.service }}" = "none" ]; then
+            FLAGS="--include database:sqlite3"
+          else
+            FLAGS="--only database:${{ matrix.service }}"
+          fi
+
+          mix test $FLAGS \
+            --max-cases "$CORES" \
+            --formatter ExUnit.CLIFormatter \
+            --formatter Phoenix.Integration.SummaryFormatter
+        env:
+          PHX_TEST_JOB: ${{ matrix.service }}
+          PHX_ELIXIR_VERSION: ${{ matrix.versions.elixir }}
+          PHX_OTP_VERSION: ${{ matrix.versions.otp }}
+          PHX_INTEGRATION_SUMMARY_JSON: ${{ runner.temp }}/summary-${{ matrix.service }}-${{ matrix.versions.otp }}-${{ matrix.versions.elixir }}.json
+
+      - name: Upload summary artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: summary-${{ matrix.service }}-${{ matrix.versions.otp }}-${{ matrix.versions.elixir }}
+          path: ${{ runner.temp }}/summary-${{ matrix.service }}-${{ matrix.versions.otp }}-${{ matrix.versions.elixir }}.json
+          retention-days: 1
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: warn
+
+  integration-test-summary:
+    name: integration test results
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    needs: integration-test-elixir
+    if: always()
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: "1.20.5"
+          otp-version: "29.1.2"
+
+      - name: Download summary artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: summary-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/summaries
+
+      - name: Aggregate test summaries
+        run: elixir integration_test/aggregate_summary.exs "${{ runner.temp }}/summaries" >> "$GITHUB_STEP_SUMMARY"

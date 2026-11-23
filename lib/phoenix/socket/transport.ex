@@ -185,8 +185,8 @@ defmodule Phoenix.Socket.Transport do
 
   The `reply` is a tuple contain an `opcode` atom and a message that can
   be any term. The built-in websocket transport supports both `:text` and
-  `:binary` opcode and the message must be always iodata. Long polling only
-  supports text opcode.
+  `:binary` opcode and the message must be always iodata. Long polling sends
+  `:binary` messages base64-encoded in its JSON poll response.
   """
   @callback handle_in({message :: term, opts :: keyword}, state) ::
               {:ok, state}
@@ -227,8 +227,9 @@ defmodule Phoenix.Socket.Transport do
 
   The `reply` is a tuple contain an `opcode` atom and a message that can
   be any term. The built-in websocket transport supports both `:text` and
-  `:binary` opcode and the message must be always iodata. Long polling only
-  supports text opcode.
+  `:binary` opcode and the message must be always iodata. Long polling sends
+  `:binary` messages base64-encoded in its JSON poll response. The Phoenix
+  JavaScript client decodes them since Phoenix 1.9.
   """
   @callback handle_info(message :: term, state) ::
               {:ok, state}
@@ -255,6 +256,9 @@ defmodule Phoenix.Socket.Transport do
   def load_config(config, module),
     do: module.default_config() |> Keyword.merge(config) |> load_config()
 
+  @atom_keys [:peer_data, :trace_context_headers, :uri, :user_agent] ++
+               [:x_headers, :sec_websocket_headers, :auth_token]
+
   @doc false
   def load_config(config) do
     {connect_info, config} = Keyword.pop(config, :connect_info, [])
@@ -269,7 +273,7 @@ defmodule Phoenix.Socket.Transport do
 
     connect_info =
       Enum.map(connect_info, fn
-        key when key in [:peer_data, :trace_context_headers, :uri, :user_agent, :x_headers, :sec_websocket_headers, :auth_token] ->
+        key when key in @atom_keys ->
           key
 
         {:session, session} ->
@@ -470,9 +474,11 @@ defmodule Phoenix.Socket.Transport do
 
     * `:user_agent` - the value of the "user-agent" request header
 
+    * `:session` - the connection session information. By default validates
+      the csrf token in it unless `check_csrf` is false
+
     * `:sec_websocket_headers` - a list of all request headers that have a "sec-websocket-" prefix
 
-  The CSRF check can be disabled by setting the `:check_csrf` option to `false`.
   """
   def connect_info(conn, endpoint, keys, opts \\ []) do
     for key <- keys, into: %{} do
@@ -570,7 +576,13 @@ defmodule Phoenix.Socket.Transport do
   end
 
   defp check_origin_config(handler, endpoint, opts) do
-    Phoenix.Config.cache(endpoint, {:check_origin, handler}, fn _ ->
+    # The same handler may be mounted several times with different
+    # :check_origin options, so the option must be part of the cache key.
+    # Otherwise the first mount to be reached decides the policy for all
+    # of them.
+    key = {:check_origin, handler, Keyword.get(opts, :check_origin)}
+
+    Phoenix.Config.cache(endpoint, key, fn _ ->
       check_origin =
         case Keyword.get(opts, :check_origin, endpoint.config(:check_origin)) do
           origins when is_list(origins) ->
@@ -620,7 +632,8 @@ defmodule Phoenix.Socket.Transport do
     do: false
 
   defp origin_allowed?(true, uri, endpoint, _conn),
-    do: compare?(uri.host, host_to_binary(endpoint.config(:url)[:host]))
+    do:
+      compare?(uri.host, Phoenix.Endpoint.Supervisor.host_to_binary(endpoint.config(:url)[:host]))
 
   defp origin_allowed?(check_origin, uri, _endpoint, _conn) when is_list(check_origin),
     do: origin_allowed?(uri, check_origin)
@@ -647,8 +660,4 @@ defmodule Phoenix.Socket.Transport do
 
   defp compare_host?(request_host, allowed_host),
     do: request_host == allowed_host
-
-  # TODO: Remove this once {:system, env_var} deprecation is removed
-  defp host_to_binary({:system, env_var}), do: host_to_binary(System.get_env(env_var))
-  defp host_to_binary(host), do: host
 end

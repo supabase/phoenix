@@ -54,6 +54,13 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
       raise "boom"
     end
 
+    def handle_in("binary_frames", _message, socket) do
+      push(socket, "text_push", %{"body" => "hello world"})
+      push(socket, "binary_push", {:binary, <<0xFF, 0xFE>>})
+      broadcast!(socket, "binary_broadcast", {:binary, <<0xFD>>})
+      {:reply, {:ok, {:binary, <<0xFC>>}}, socket}
+    end
+
     def handle_out(event, payload, socket) do
       push(socket, event, Map.put(payload, "transport", inspect(socket.transport)))
       {:noreply, socket}
@@ -148,6 +155,14 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
         check_origin: ["//example.com"]
       ]
 
+    socket "/ws/limited", UserSocket,
+      longpoll: [
+        window_ms: 200,
+        pubsub_timeout_ms: 200,
+        check_origin: ["//example.com"]
+      ],
+      max_channels_per_transport: 1
+
     socket "/ws/connect_info", UserSocketConnectInfo,
       longpoll: [
         window_ms: 200,
@@ -207,6 +222,14 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
     decode_body(serializer, resp)
   end
 
+  # Polls until a message matching `fun` arrives and returns all messages received.
+  defp poll_until(vsn, session, fun, acc \\ []) do
+    resp = poll(:get, "/ws", vsn, session)
+    assert resp.body["status"] == 200
+    acc = acc ++ resp.body["messages"]
+    if Enum.any?(acc, fun), do: acc, else: poll_until(vsn, session, fun, acc)
+  end
+
   defp serializer("2." <> _, json), do: {V2.JSONSerializer, json}
   defp serializer(_, nil), do: {V1.JSONSerializer, nil}
 
@@ -223,7 +246,10 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
     |> update_in([:body], &Phoenix.json_library().decode!(&1))
     |> update_in([:body, "messages"], fn messages ->
       for msg <- messages || [] do
-        serializer.decode!(msg, opcode: :text)
+        case msg do
+          %{"binary" => base64} -> {:binary, Base.decode64!(base64)}
+          text -> serializer.decode!(text, opcode: :text)
+        end
       end
     end)
   end
@@ -456,6 +482,44 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
                  ] = resp.body["messages"]
         end
 
+        test "#{@mode}: honors max_channels_per_transport given to socket/3" do
+          prefix = "room:limited-#{System.unique_integer([:positive])}"
+          first_topic = "#{prefix}-1"
+          session = join("/ws/limited", first_topic, @vsn, "1", @mode)
+
+          resp = poll(:get, "/ws/limited", @vsn, session)
+          assert resp.body["status"] == 200
+
+          assert [
+                   %Message{
+                     event: "phx_reply",
+                     payload: %{"response" => %{}, "status" => "ok"},
+                     topic: ^first_topic
+                   },
+                   %Message{event: "user_entered", topic: ^first_topic},
+                   %Message{event: "joined", topic: ^first_topic}
+                 ] = resp.body["messages"]
+
+          overflow_topic = "#{prefix}-2"
+          resp = join_existing_session("/ws/limited", session, overflow_topic, @vsn, "2", "2")
+          assert resp.body["status"] == 200
+
+          resp = poll(:get, "/ws/limited", @vsn, session)
+          assert resp.body["status"] == 200
+
+          assert [
+                   %Message{
+                     event: "phx_reply",
+                     payload: %{
+                       "response" => %{"reason" => "too many channels joined"},
+                       "status" => "error"
+                     },
+                     ref: "2",
+                     topic: ^overflow_topic
+                   }
+                 ] = resp.body["messages"]
+        end
+
         test "#{@mode}: transport x_headers are extracted to the socket connect_info" do
           session =
             join("/ws/connect_info", "room:lobby", @vsn, "1", @mode, %{}, %{}, %{
@@ -534,8 +598,7 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
 
         test "#{@mode}: publishing events" do
           Phoenix.PubSub.subscribe(__MODULE__, "room:lobby")
-          join_ref = "1"
-          session = join("/ws", "room:lobby", @vsn, join_ref, @mode)
+          session = join("/ws", "room:lobby", @vsn, "1", @mode)
 
           # Publish successfully
           resp =
@@ -543,7 +606,7 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
               "topic" => "room:lobby",
               "event" => "new_msg",
               "ref" => "1",
-              "join_ref" => join_ref,
+              # no join_ref required on regular messages
               "payload" => %{"body" => "hi!"}
             })
 
@@ -594,6 +657,23 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
           end)
         end
 
+        test "#{@mode}: no join_ref is required on non-join messages" do
+          vsn = "2.0.0"
+          Phoenix.PubSub.subscribe(__MODULE__, "room:lobby")
+          session = join("/ws", "room:lobby", vsn, "1", @mode)
+
+          resp =
+            poll(:post, "/ws", vsn, session, %{
+              "topic" => "room:lobby",
+              "event" => "new_msg",
+              "ref" => "2",
+              "payload" => %{"body" => "hi!"}
+            })
+
+          assert resp.body["status"] == 200
+          assert_receive %Broadcast{event: "new_msg", payload: %{"body" => "hi!"}}
+        end
+
         test "#{@mode}: lonpoll publishing batch events on v2 protocol" do
           vsn = "2.0.0"
           Phoenix.PubSub.subscribe(__MODULE__, "room:lobby")
@@ -614,12 +694,20 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
                 "ref" => "3",
                 "join_ref" => "1",
                 "payload" => %{"body" => "hi2"}
+              },
+              %{
+                "topic" => "room:lobby",
+                "event" => "new_msg",
+                "ref" => "stale",
+                "join_ref" => "stale",
+                "payload" => %{"body" => "stale"}
               }
             ])
 
           assert resp.body["status"] == 200
           assert_receive %Broadcast{event: "new_msg", payload: %{"body" => "hi1"}}
           assert_receive %Broadcast{event: "new_msg", payload: %{"body" => "hi2"}}
+          refute_receive %Broadcast{event: "new_msg", payload: %{"body" => "stale"}}
 
           # Publish base64 binary successfully
           resp =
@@ -747,6 +835,58 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
         assert new_msg_bodies == for(n <- 1..100, do: "msg#{n}")
         refute_receive %Broadcast{event: "new_msg", payload: %{"body" => "msg101"}}
       end
+
+      test "sends binary frames base64-encoded next to text frames", %{topic: topic} do
+        vsn = "2.0.0"
+        session = join("/ws", topic, vsn, "1")
+
+        resp =
+          poll(:post, "/ws", vsn, session, %{
+            "topic" => topic,
+            "event" => "binary_frames",
+            "ref" => "2",
+            "join_ref" => "1",
+            "payload" => %{}
+          })
+
+        assert resp.body["status"] == 200
+
+        # the channel sends the reply last, so all frames are buffered once it arrives
+        messages =
+          poll_until(vsn, session, &match?({:binary, <<1, _::binary>>}, &1))
+          |> Enum.drop_while(&(not match?(%Message{event: "text_push"}, &1)))
+
+        {:socket_push, :binary, push} =
+          V2.JSONSerializer.encode!(%Message{
+            join_ref: "1",
+            topic: topic,
+            event: "binary_push",
+            payload: {:binary, <<0xFF, 0xFE>>}
+          })
+
+        {:socket_push, :binary, broadcast} =
+          V2.JSONSerializer.fastlane!(%Broadcast{
+            topic: topic,
+            event: "binary_broadcast",
+            payload: {:binary, <<0xFD>>}
+          })
+
+        {:socket_push, :binary, reply} =
+          V2.JSONSerializer.encode!(%Phoenix.Socket.Reply{
+            join_ref: "1",
+            ref: "2",
+            topic: topic,
+            status: :ok,
+            payload: {:binary, <<0xFC>>}
+          })
+
+        assert [
+                 %Message{event: "text_push", payload: %{"body" => "hello world"}},
+                 {:binary, ^push},
+                 {:binary, ^broadcast},
+                 {:binary, ^reply}
+               ] = messages
+      end
     end
 
     for {serializer, vsn, join_ref} <- [
@@ -818,21 +958,32 @@ defmodule Phoenix.Integration.LongPollChannelsTest do
 
           assert chan_error == %Message{
                    event: "phx_error",
-                   payload: %{},
+                   payload: %{"reason" => "channel_crash"},
                    topic: topic,
                    ref: @join_ref,
                    join_ref: @join_ref
                  }
         end
 
-        test "sends phx_close if a channel server normally exits" do
+        test "ignores stale join refs and accepts a nil join ref on phx_leave" do
           session = join("/ws", "room:lobby", @vsn, @join_ref)
 
           resp =
             poll(:post, "/ws", @vsn, session, %{
               "topic" => "room:lobby",
               "event" => "phx_leave",
-              "join_ref" => @join_ref,
+              "join_ref" => "stale",
+              "ref" => "stale",
+              "payload" => %{}
+            })
+
+          assert resp.body["status"] == 200
+          assert resp.status == 200
+
+          resp =
+            poll(:post, "/ws", @vsn, session, %{
+              "topic" => "room:lobby",
+              "event" => "phx_leave",
               "ref" => "2",
               "payload" => %{}
             })

@@ -158,7 +158,7 @@ var Phoenix = (() => {
         payload: this.payload(),
         ref: this.ref,
         join_ref: this.channel.joinRef()
-      });
+      }, this.channel);
     }
     /**
      *
@@ -206,6 +206,7 @@ var Phoenix = (() => {
       if (this.timeoutTimer) {
         this.cancelTimeout();
       }
+      this.cancelRefEvent();
       this.ref = this.channel.socket.makeRef();
       this.refEvent = this.channel.replyEventName(this.ref);
       this.channel.on(this.refEvent, (payload) => {
@@ -600,12 +601,21 @@ var Phoenix = (() => {
         body
       };
       let controller = null;
+      let timeoutId = null;
       if (timeout) {
         controller = new AbortController();
-        const _timeoutId = setTimeout(() => controller.abort(), timeout);
+        timeoutId = setTimeout(() => controller.abort(), timeout);
         options.signal = controller.signal;
       }
-      global.fetch(endPoint, options).then((response) => response.text()).then((data) => this.parseJSON(data)).then((data) => callback && callback(data)).catch((err) => {
+      global.fetch(endPoint, options).then((response) => response.text()).then((data) => this.parseJSON(data)).then((data) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        callback && callback(data);
+      }).catch((err) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         if (err.name === "AbortError" && ontimeout) {
           ontimeout();
         } else {
@@ -694,6 +704,15 @@ var Phoenix = (() => {
     }
     return btoa(binary);
   };
+  var base64ToArrayBuffer = (base64) => {
+    let binary = atob(base64);
+    let bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  };
+  var decodeMessage = (msg) => typeof msg === "string" ? msg : base64ToArrayBuffer(msg.binary);
   var LongPoll = class {
     constructor(endPoint, protocols) {
       if (protocols && protocols.length === 2 && protocols[1].startsWith(AUTH_TOKEN_PREFIX)) {
@@ -703,6 +722,7 @@ var Phoenix = (() => {
       this.token = null;
       this.skipHeartbeat = true;
       this.reqs = /* @__PURE__ */ new Set();
+      this.messageTimers = /* @__PURE__ */ new Set();
       this.awaitingBatchAck = false;
       this.currentBatch = null;
       this.currentBatchTimer = null;
@@ -723,20 +743,28 @@ var Phoenix = (() => {
       return endPoint.replace("ws://", "http://").replace("wss://", "https://").replace(new RegExp("(.*)/" + TRANSPORTS.websocket), "$1/" + TRANSPORTS.longpoll);
     }
     endpointURL() {
-      return Ajax.appendParams(this.pollEndpoint, { token: this.token });
+      return this.pollEndpoint;
     }
-    closeAndRetry(code, reason, wasClean) {
-      this.close(code, reason, wasClean);
-      this.readyState = SOCKET_STATES.connecting;
+    closeAndRetry(error, code, reason, wasClean) {
+      if (!this.isActive()) {
+        return;
+      }
+      this.stop(SOCKET_STATES.connecting);
+      this.onerror(error);
+      if (this.isActive()) {
+        this.emitClose(code, reason, wasClean);
+      }
     }
     ontimeout() {
-      this.onerror("timeout");
-      this.closeAndRetry(1005, "timeout", false);
+      this.closeAndRetry("timeout", 1005, "timeout", false);
     }
     isActive() {
       return this.readyState === SOCKET_STATES.open || this.readyState === SOCKET_STATES.connecting;
     }
     poll() {
+      if (!this.isActive()) {
+        return;
+      }
       const headers = { "Accept": "application/json" };
       if (this.authToken) {
         headers["X-Phoenix-AuthToken"] = this.authToken;
@@ -745,8 +773,7 @@ var Phoenix = (() => {
         if (resp) {
           var { status, token, messages } = resp;
           if (status === 410 && this.token !== null) {
-            this.onerror(410);
-            this.closeAndRetry(3410, "session_gone", false);
+            this.closeAndRetry(410, 3410, "session_gone", false);
             return;
           }
           this.token = token;
@@ -756,7 +783,11 @@ var Phoenix = (() => {
         switch (status) {
           case 200:
             messages.forEach((msg) => {
-              setTimeout(() => this.onmessage({ data: msg }), 0);
+              const timer = setTimeout(() => {
+                this.messageTimers.delete(timer);
+                this.onmessage({ data: decodeMessage(msg) });
+              }, 0);
+              this.messageTimers.add(timer);
             });
             this.poll();
             break;
@@ -774,8 +805,7 @@ var Phoenix = (() => {
             break;
           case 0:
           case 500:
-            this.onerror(500);
-            this.closeAndRetry(1011, "internal server error", 500);
+            this.closeAndRetry(500, 1011, "internal server error", false);
             break;
           default:
             throw new Error(`unhandled poll status ${status}`);
@@ -805,11 +835,9 @@ var Phoenix = (() => {
       this.awaitingBatchAck = true;
       const next = offset + MAX_LONGPOLL_BATCH_SIZE;
       const batch = messages.slice(offset, next);
-      this.ajax("POST", { "Content-Type": "application/x-ndjson" }, batch.join("\n"), () => this.onerror("timeout"), (resp) => {
+      this.ajax("POST", { "Content-Type": "application/x-ndjson" }, batch.join("\n"), () => this.ontimeout(), (resp) => {
         if (!resp || resp.status !== 200) {
-          this.awaitingBatchAck = false;
-          this.onerror(resp && resp.status);
-          this.closeAndRetry(1011, "internal server error", false);
+          this.closeAndRetry(resp && resp.status, 1011, "internal server error", false);
         } else if (next < messages.length) {
           this.batchSend(messages, next);
         } else if (this.batchBuffer.length > 0) {
@@ -821,14 +849,35 @@ var Phoenix = (() => {
       });
     }
     close(code, reason, wasClean) {
-      for (let req of this.reqs) {
-        req.abort();
+      this.stop(SOCKET_STATES.closed);
+      this.emitClose(code, reason, wasClean);
+    }
+    /**
+     * Cancels the pending requests, queued messages and outgoing batches.
+     */
+    stop(readyState) {
+      this.readyState = readyState;
+      const reqs = this.reqs;
+      this.reqs = /* @__PURE__ */ new Set();
+      for (let { req } of reqs) {
+        req && req.abort();
       }
-      this.readyState = SOCKET_STATES.closed;
-      let opts = Object.assign({ code: 1e3, reason: void 0, wasClean: true }, { code, reason, wasClean });
+      for (let timer of this.messageTimers) {
+        clearTimeout(timer);
+      }
+      this.messageTimers.clear();
       this.batchBuffer = [];
+      this.awaitingBatchAck = false;
       clearTimeout(this.currentBatchTimer);
       this.currentBatchTimer = null;
+      this.currentBatch = null;
+    }
+    /**
+     * Emits the close event. Like a WebSocket closed without a code, it reports 1005 (no status)
+     * unless one is given, as 1000 would look like the server closing the connection normally.
+     */
+    emitClose(code = 1005, reason, wasClean = true) {
+      let opts = { code, reason, wasClean };
       if (typeof CloseEvent !== "undefined") {
         this.onclose(new CloseEvent("close", opts));
       } else {
@@ -836,18 +885,21 @@ var Phoenix = (() => {
       }
     }
     ajax(method, headers, body, onCallerTimeout, callback) {
-      let req;
+      const request = { req: null };
+      this.reqs.add(request);
       let ontimeout = () => {
-        this.reqs.delete(req);
-        onCallerTimeout();
+        if (this.reqs.delete(request)) {
+          onCallerTimeout();
+        }
       };
-      req = Ajax.request(method, this.endpointURL(), headers, body, this.timeout, ontimeout, (resp) => {
-        this.reqs.delete(req);
-        if (this.isActive()) {
+      if (this.token !== null) {
+        headers = Object.assign({}, headers, { "X-Phoenix-Longpoll-Token": this.token });
+      }
+      request.req = Ajax.request(method, this.endpointURL(), headers, body, this.timeout, ontimeout, (resp) => {
+        if (this.reqs.delete(request)) {
           callback(resp);
         }
       });
-      this.reqs.add(req);
     }
   };
 
@@ -1212,6 +1264,77 @@ var Phoenix = (() => {
     }
   };
 
+  // js/phoenix/connection.js
+  var Connection = class {
+    /**
+     * @param {Socket} socket
+     * @param {Object} transport - The transport instance, for example a WebSocket
+     */
+    constructor(socket, transport) {
+      this.socket = socket;
+      this.transport = transport;
+      this.joins = /* @__PURE__ */ new WeakMap();
+      this.pings = /* @__PURE__ */ new Map();
+      this.closing = false;
+      this.ended = false;
+      this.channelsErrored = false;
+      this.closeHandled = false;
+      transport.onopen = () => {
+        if (this.isCurrent()) {
+          socket.onConnOpen();
+        }
+      };
+      transport.onerror = (error) => {
+        if (this.isCurrent()) {
+          socket.onConnError(error);
+        }
+      };
+      transport.onmessage = (event) => {
+        if (this.isCurrent()) {
+          socket.onConnMessage(event);
+        }
+      };
+      transport.onclose = (event) => {
+        if (this.isCurrent() && !this.closeHandled) {
+          this.closeHandled = true;
+          socket.onConnClose(event);
+        }
+      };
+    }
+    /**
+     * Whether this is the connection the socket currently uses. A replaced connection
+     * can still emit events while it closes, but they no longer concern the socket.
+     */
+    isCurrent() {
+      return this.socket.connection === this;
+    }
+    isOpen() {
+      return this.transport.readyState === SOCKET_STATES.open;
+    }
+    isConnecting() {
+      return this.transport.readyState === SOCKET_STATES.connecting;
+    }
+    /**
+     * Whether the channel's current join was sent over this connection.
+     */
+    carried(channel, joinRef = channel.joinRef()) {
+      return this.joins.has(channel) && this.joins.get(channel) === joinRef;
+    }
+    /**
+     * Closes the transport. Its close event then only confirms our close.
+     */
+    close(code, reason) {
+      this.closing = true;
+      this.transport.onerror = function() {
+      };
+      if (code) {
+        this.transport.close(code, reason || "");
+      } else {
+        this.transport.close();
+      }
+    }
+  };
+
   // js/phoenix/socket.js
   var Socket = class {
     /** Initializes the Socket *
@@ -1231,9 +1354,10 @@ var Phoenix = (() => {
       this.sendBuffer = [];
       this.ref = 0;
       this.fallbackRef = null;
+      this.fallbackErrorRef = null;
+      this.fallbackHealthCheck = null;
       this.timeout = opts.timeout || DEFAULT_TIMEOUT;
       this.transport = opts.transport || global.WebSocket || LongPoll;
-      this.conn = void 0;
       this.primaryPassedHealthCheck = false;
       this.longPollFallbackMs = opts.longPollFallbackMs;
       this.fallbackTimer = null;
@@ -1247,10 +1371,10 @@ var Phoenix = (() => {
       this.defaultEncoder = serializer_default.encode.bind(serializer_default);
       this.defaultDecoder = serializer_default.decode.bind(serializer_default);
       this.closeWasClean = true;
-      this.disconnecting = false;
       this.binaryType = opts.binaryType || "arraybuffer";
+      this.connection = null;
       this.connectClock = 1;
-      this.pageHidden = false;
+      this.visibilityConnection = null;
       this.encode = void 0;
       this.decode = void 0;
       if (this.transport !== LongPoll) {
@@ -1263,7 +1387,7 @@ var Phoenix = (() => {
       let awaitingConnectionOnPageShow = null;
       if (phxWindow && phxWindow.addEventListener) {
         phxWindow.addEventListener("pagehide", (_e) => {
-          if (this.conn) {
+          if (this.connection && !this.connection.ended) {
             this.disconnect();
             awaitingConnectionOnPageShow = this.connectClock;
           }
@@ -1275,14 +1399,10 @@ var Phoenix = (() => {
           }
         });
         phxWindow.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "hidden") {
-            this.pageHidden = true;
-          } else {
-            this.pageHidden = false;
-            if (!this.isConnected() && !this.closeWasClean) {
-              this.teardown(() => this.connect());
-            }
-          }
+          this.handleVisibilityChange();
+        });
+        phxWindow.document && phxWindow.document.addEventListener("resume", () => {
+          this.handleVisibilityChange();
         });
       }
       this.heartbeatIntervalMs = opts.heartbeatIntervalMs || 3e4;
@@ -1303,6 +1423,7 @@ var Phoenix = (() => {
           return [10, 50, 100, 150, 200, 250, 500, 1e3, 2e3][tries - 1] || 5e3;
         }
       };
+      this.reconnectWhenHidden = opts.reconnectWhenHidden || false;
       this.logger = opts.logger || null;
       if (!this.logger && opts.debug) {
         this.logger = (kind, msg, data) => {
@@ -1318,17 +1439,50 @@ var Phoenix = (() => {
       this.heartbeatSentAt = null;
       this.pendingHeartbeatRef = null;
       this.reconnectTimer = new Timer(() => {
-        if (this.pageHidden) {
+        if (this.pageHidden && !this.reconnectWhenHidden) {
           this.log("Not reconnecting as page is hidden!");
           this.teardown();
           return;
         }
-        this.teardown(() => __async(this, null, function* () {
+        this.teardownAndReconnect(() => __async(this, null, function* () {
           if (opts.beforeReconnect) yield opts.beforeReconnect();
           this.connect();
         }));
       }, this.reconnectAfterMs);
       this.authToken = opts.authToken && closure(opts.authToken);
+    }
+    /**
+     * The transport instance of the current connection, for example a WebSocket
+     * @type{InstanceType<SocketTransport> | null}
+     */
+    get conn() {
+      return this.connection && this.connection.transport;
+    }
+    /**
+     * @internal
+     */
+    get pageHidden() {
+      return phxWindow && phxWindow.document ? phxWindow.document.visibilityState === "hidden" : false;
+    }
+    /**
+     * @internal
+     */
+    handleVisibilityChange() {
+      if (this.pageHidden) {
+        this.visibilityConnection = null;
+        return;
+      }
+      const connection = this.connection;
+      if (connection && connection === this.visibilityConnection && connection.isConnecting()) {
+        return;
+      }
+      if (!this.isConnected() && !this.closeWasClean) {
+        this.reconnectTimer.reset();
+        this.teardownAndReconnect(() => {
+          this.connect();
+          this.visibilityConnection = this.connection;
+        });
+      }
     }
     /**
      * Returns the LongPoll transport reference
@@ -1343,15 +1497,23 @@ var Phoenix = (() => {
      *
      */
     replaceTransport(newTransport) {
-      this.connectClock++;
+      const connectClock = ++this.connectClock;
       this.closeWasClean = true;
       clearTimeout(this.fallbackTimer);
       this.reconnectTimer.reset();
-      if (this.conn) {
-        this.conn.close();
-        this.conn = null;
-      }
       this.transport = newTransport;
+      const connection = this.connection;
+      if (connection) {
+        const wasOpen = connection.isOpen();
+        this.connection = null;
+        connection.ended = true;
+        connection.close();
+        this.clearHeartbeats();
+        if (wasOpen) {
+          this.triggerChanError("connection_closed", connection);
+        }
+      }
+      return connectClock;
     }
     /**
      * Returns the socket protocol
@@ -1390,14 +1552,13 @@ var Phoenix = (() => {
      */
     disconnect(callback, code, reason) {
       this.connectClock++;
-      this.disconnecting = true;
       this.closeWasClean = true;
       clearTimeout(this.fallbackTimer);
       this.reconnectTimer.reset();
-      this.teardown(() => {
-        this.disconnecting = false;
-        callback && callback();
-      }, code, reason);
+      if (this.connection) {
+        this.connection.ended = true;
+      }
+      this.teardown(callback, code, reason);
     }
     /**
      * @param {Params} [params] - [DEPRECATED] The params to send when connecting, for example `{user_id: userToken}`
@@ -1410,7 +1571,7 @@ var Phoenix = (() => {
         console && console.log("passing params to connect is deprecated. Instead pass :params to the Socket constructor");
         this.params = closure(params);
       }
-      if (this.conn && !this.disconnecting) {
+      if (this.connection && !this.connection.ended) {
         return;
       }
       if (this.longPollFallbackMs && this.transport !== LongPoll) {
@@ -1499,13 +1660,8 @@ var Phoenix = (() => {
       }
       let ref = this.makeRef();
       let startTime = Date.now();
+      this.connection.pings.set(ref, () => callback(Date.now() - startTime));
       this.push({ topic: "phoenix", event: "heartbeat", payload: {}, ref });
-      let onMsgRef = this.onMessage((msg) => {
-        if (msg.ref === ref) {
-          this.off([onMsgRef]);
-          callback(Date.now() - startTime);
-        }
-      });
       return true;
     }
     /**
@@ -1525,19 +1681,21 @@ var Phoenix = (() => {
      * @private
      */
     transportConnect() {
+      const previous = this.connection;
       this.connectClock++;
       this.closeWasClean = false;
+      clearTimeout(this.reconnectTimer.timer);
       let protocols = void 0;
       if (this.authToken) {
         protocols = ["phoenix", `${AUTH_TOKEN_PREFIX}${btoa(this.authToken()).replace(/=/g, "")}`];
       }
-      this.conn = new this.transport(this.endPointURL(), protocols);
-      this.conn.binaryType = this.binaryType;
-      this.conn.timeout = this.longpollerTimeout;
-      this.conn.onopen = () => this.onConnOpen();
-      this.conn.onerror = (error) => this.onConnError(error);
-      this.conn.onmessage = (event) => this.onConnMessage(event);
-      this.conn.onclose = (event) => this.onConnClose(event);
+      const transport = new this.transport(this.endPointURL(), protocols);
+      transport.binaryType = this.binaryType;
+      transport.timeout = this.longpollerTimeout;
+      this.connection = new Connection(this, transport);
+      if (previous && previous.isOpen()) {
+        this.triggerChanError("connection_closed", previous);
+      }
     }
     getSession(key) {
       return this.sessionStore && this.sessionStore.getItem(key);
@@ -1546,60 +1704,90 @@ var Phoenix = (() => {
       this.sessionStore && this.sessionStore.setItem(key, val);
     }
     connectWithFallback(fallbackTransport, fallbackThreshold = 2500) {
-      clearTimeout(this.fallbackTimer);
+      this.cancelFallback();
       let established = false;
       let primaryTransport = true;
-      let openRef, errorRef;
+      let errorRef;
+      let connectClock;
+      const isCurrent = () => connectClock === this.connectClock && !this.closeWasClean;
       let fallbackTransportName = this.transportName(fallbackTransport);
       let fallback = (reason) => {
         this.log("transport", `falling back to ${fallbackTransportName}...`, reason);
-        this.off([openRef, errorRef]);
+        this.off([errorRef]);
         primaryTransport = false;
-        this.replaceTransport(fallbackTransport);
+        const replaceClock = this.replaceTransport(fallbackTransport);
+        if (replaceClock !== this.connectClock) {
+          return;
+        }
         this.transportConnect();
       };
       if (this.getSession(`phx:fallback:${fallbackTransportName}`)) {
         return fallback("memorized");
       }
       this.fallbackTimer = setTimeout(fallback, fallbackThreshold);
-      errorRef = this.onError((reason) => {
+      errorRef = this.fallbackErrorRef = this.onError((reason) => {
+        if (!isCurrent()) {
+          return;
+        }
         this.log("transport", "error", reason);
         if (primaryTransport && !established) {
           clearTimeout(this.fallbackTimer);
           fallback(reason);
         }
       });
-      if (this.fallbackRef) {
-        this.off([this.fallbackRef]);
-      }
       this.fallbackRef = this.onOpen(() => {
-        established = true;
         if (!primaryTransport) {
+          if (this.transport !== fallbackTransport || this.closeWasClean) {
+            return;
+          }
           let fallbackTransportName2 = this.transportName(fallbackTransport);
           if (!this.primaryPassedHealthCheck) {
             this.storeSession(`phx:fallback:${fallbackTransportName2}`, "true");
           }
           return this.log("transport", `established ${fallbackTransportName2} fallback`);
         }
+        if (!isCurrent()) {
+          return;
+        }
+        established = true;
         clearTimeout(this.fallbackTimer);
         this.fallbackTimer = setTimeout(fallback, fallbackThreshold);
+      });
+      this.fallbackHealthCheck = () => {
+        if (!isCurrent()) {
+          return;
+        }
         this.ping((rtt) => {
           this.log("transport", "connected to primary after", rtt);
           this.primaryPassedHealthCheck = true;
           clearTimeout(this.fallbackTimer);
         });
-      });
+      };
       this.transportConnect();
+      connectClock = this.connectClock;
+    }
+    /**
+     * @private
+     *
+     * Stops the fallback of the current connection attempt, see connectWithFallback
+     */
+    cancelFallback() {
+      clearTimeout(this.fallbackTimer);
+      this.off([this.fallbackRef, this.fallbackErrorRef]);
+      this.fallbackHealthCheck = null;
     }
     clearHeartbeats() {
       clearTimeout(this.heartbeatTimer);
       clearTimeout(this.heartbeatTimeoutTimer);
+      this.pendingHeartbeatRef = null;
     }
     onConnOpen() {
       if (this.hasLogger()) this.log("transport", `connected to ${this.endPointURL()}`);
       this.closeWasClean = false;
-      this.disconnecting = false;
       this.establishedConnections++;
+      if (this.fallbackHealthCheck) {
+        this.fallbackHealthCheck();
+      }
       this.flushSendBuffer();
       this.reconnectTimer.reset();
       if (this.autoSendHeartbeat) {
@@ -1612,6 +1800,7 @@ var Phoenix = (() => {
      */
     heartbeatTimeout() {
       if (this.pendingHeartbeatRef) {
+        const connection = this.connection;
         this.pendingHeartbeatRef = null;
         this.heartbeatSentAt = null;
         if (this.hasLogger()) {
@@ -1622,48 +1811,76 @@ var Phoenix = (() => {
         } catch (e) {
           this.log("error", "error in heartbeat callback", e);
         }
-        this.triggerChanError(new Error("heartbeat timeout"));
         this.closeWasClean = false;
-        this.teardown(() => this.reconnectTimer.scheduleTimeout(), WS_CLOSE_NORMAL, "heartbeat timeout");
+        if (connection) {
+          connection.close(WS_CLOSE_NORMAL, "heartbeat timeout");
+        }
+        if (!this.stillUses(connection)) {
+          return;
+        }
+        this.triggerChanError("heartbeat_timeout");
+        if (!this.stillUses(connection)) {
+          return;
+        }
+        this.teardownAndReconnect(() => this.reconnectTimer.scheduleTimeout());
       }
     }
     resetHeartbeat() {
       if (this.conn && this.conn.skipHeartbeat) {
         return;
       }
-      this.pendingHeartbeatRef = null;
       this.clearHeartbeats();
       this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
     }
+    /**
+     * @private
+     *
+     * Tears down the current connection to reconnect afterwards, unless the socket was
+     * disconnected or connected again in the meantime, which takes precedence.
+     */
+    teardownAndReconnect(reconnect) {
+      const connection = this.connection;
+      const connectClock = this.connectClock;
+      this.teardown(() => {
+        if (connectClock !== this.connectClock || connection && connection.ended) {
+          return;
+        }
+        reconnect();
+      });
+    }
+    /**
+     * @private
+     *
+     * Whether the socket still uses the connection and did not give up on it. User callbacks
+     * can disconnect or connect, so code continuing after them checks this first.
+     */
+    stillUses(connection) {
+      return this.connection === connection && !(connection && connection.ended);
+    }
     teardown(callback, code, reason) {
-      if (!this.conn) {
+      const connection = this.connection;
+      if (!connection) {
         return callback && callback();
       }
-      const connToClose = this.conn;
-      this.waitForBufferDone(connToClose, () => {
-        if (code) {
-          connToClose.close(code, reason || "");
-        } else {
-          connToClose.close();
+      this.clearHeartbeats();
+      this.waitForBufferDone(connection.transport, () => {
+        if (!connection.closing) {
+          const wasOpened = !connection.isConnecting();
+          connection.close(code, reason);
+          if (wasOpened) {
+            this.triggerChanError("connection_closed", connection);
+          }
         }
-        this.waitForSocketClosed(connToClose, () => {
-          if (this.conn === connToClose) {
-            this.conn.onopen = function() {
-            };
-            this.conn.onerror = function() {
-            };
-            this.conn.onmessage = function() {
-            };
-            this.conn.onclose = function() {
-            };
-            this.conn = null;
+        this.waitForSocketClosed(connection.transport, () => {
+          if (this.connection === connection) {
+            this.connection = null;
           }
           callback && callback();
         });
       });
     }
     waitForBufferDone(conn, callback, tries = 1) {
-      if (tries === 5 || !conn.bufferedAmount) {
+      if (tries === 5 || !conn.bufferedAmount || conn.readyState !== SOCKET_STATES.open) {
         callback();
         return;
       }
@@ -1684,12 +1901,12 @@ var Phoenix = (() => {
     * @param {CloseEvent} event
     */
     onConnClose(event) {
-      if (this.conn) this.conn.onclose = () => {
-      };
+      const connection = this.connection;
       if (this.hasLogger()) this.log("transport", "close", event);
-      this.triggerChanError(event);
       this.clearHeartbeats();
-      if (!this.closeWasClean) {
+      const closedByUs = !!(connection && connection.closing);
+      this.triggerChanError("connection_closed", connection, event);
+      if (this.stillUses(connection) && !closedByUs && !this.closeWasClean) {
         this.reconnectTimer.scheduleTimeout();
       }
       this.triggerStateCallbacks("close", event);
@@ -1699,22 +1916,42 @@ var Phoenix = (() => {
      * @param {Event} error
      */
     onConnError(error) {
+      const connection = this.connection;
       if (this.hasLogger()) this.log("transport", "error", error);
       let transportBefore = this.transport;
       let establishedBefore = this.establishedConnections;
       this.triggerStateCallbacks("error", error, transportBefore, establishedBefore);
-      if (transportBefore === this.transport || establishedBefore > 0) {
-        this.triggerChanError(error);
-      }
+      this.triggerChanError("connection_error", connection, error);
     }
     /**
      * @private
-     * @param {unknown} [reason] underlying close/error event forwarded to channel error listeners
+     *
+     * Errors the channels, as they need to rejoin once the given connection stopped being open.
+     *
+     * Channel error listeners receive `{source: "transport", reason}`, plus `event` with the
+     * underlying close/error event when there is one.
+     *
+     * @param {string} reason
+     * @param {Connection | null} [connection]
+     * @param {unknown} [event] underlying close/error event forwarded to channel error listeners
      */
-    triggerChanError(reason) {
-      this.channels.forEach((channel) => {
+    triggerChanError(reason, connection = this.connection, event = void 0) {
+      let erroredBefore = false;
+      if (connection && !connection.isOpen()) {
+        erroredBefore = connection.channelsErrored;
+        connection.channelsErrored = true;
+      }
+      const payload = event === void 0 ? { source: "transport", reason } : { source: "transport", reason, event };
+      const joins = this.channels.map((channel) => [channel, channel.joinRef()]);
+      joins.forEach(([channel, joinRef]) => {
+        if (channel.joinRef() !== joinRef) {
+          return;
+        }
+        if (connection && (erroredBefore || !connection.isCurrent()) && !connection.carried(channel, joinRef)) {
+          return;
+        }
         if (!(channel.isErrored() || channel.isLeaving() || channel.isClosed())) {
-          channel.trigger(CHANNEL_EVENTS.error, reason);
+          channel.trigger(CHANNEL_EVENTS.error, payload);
         }
       });
     }
@@ -1774,17 +2011,48 @@ var Phoenix = (() => {
     }
     /**
      * @param {Message<Record<string, any>>} data
+     * @param {Channel} [channel] - The channel the push belongs to, if any
      */
-    push(data) {
+    push(data, channel) {
       if (this.hasLogger()) {
         let { topic, event, payload, ref, join_ref } = data;
         this.log("push", `${topic} ${event} (${join_ref}, ${ref})`, payload);
       }
       if (this.isConnected()) {
-        this.encode(data, (result) => this.conn.send(result));
+        this.send(data, channel);
       } else {
-        this.sendBuffer.push(() => this.encode(data, (result) => this.conn.send(result)));
+        this.sendBuffer.push(() => {
+          if (!this.isOutdated(data, channel)) {
+            this.send(data, channel);
+          }
+        });
       }
+    }
+    /**
+     * @private
+     */
+    send(data, channel) {
+      const connection = this.connection;
+      if (channel && data.event === CHANNEL_EVENTS.join) {
+        connection.joins.set(channel, data.join_ref);
+      }
+      this.encode(data, (result) => {
+        if (!connection.isCurrent() || !connection.isOpen()) {
+          return;
+        }
+        if (data.event !== CHANNEL_EVENTS.leave && this.isOutdated(data, channel)) {
+          return;
+        }
+        connection.transport.send(result);
+      });
+    }
+    /**
+     * @private
+     *
+     * Whether the push was made for an earlier join of its channel, or the channel left since.
+     */
+    isOutdated(data, channel) {
+      return !!channel && (data.join_ref !== channel.joinRef() || channel.isClosed());
     }
     /**
      * Return the next message ref, accounting for overflows
@@ -1832,7 +2100,12 @@ var Phoenix = (() => {
     * @param {MessageEvent<any>} rawMessage
     */
     onConnMessage(rawMessage) {
+      const connection = this.connection;
+      const wasOpen = connection && connection.isOpen();
       this.decode(rawMessage.data, (msg) => {
+        if (connection !== this.connection || wasOpen && !connection.isOpen()) {
+          return;
+        }
         let { topic, event, payload, ref, join_ref } = msg;
         if (ref && ref === this.pendingHeartbeatRef) {
           const latency = this.heartbeatSentAt ? Date.now() - this.heartbeatSentAt : void 0;
@@ -1842,21 +2115,26 @@ var Phoenix = (() => {
           } catch (e) {
             this.log("error", "error in heartbeat callback", e);
           }
-          this.pendingHeartbeatRef = null;
           this.heartbeatSentAt = null;
           if (this.autoSendHeartbeat) {
             this.heartbeatTimer = setTimeout(() => this.sendHeartbeat(), this.heartbeatIntervalMs);
           }
         }
         if (this.hasLogger()) this.log("receive", `${payload.status || ""} ${topic} ${event} ${ref && "(" + ref + ")" || ""}`.trim(), payload);
-        for (let i = 0; i < this.channels.length; i++) {
-          const channel = this.channels[i];
+        const channels = this.channels;
+        for (let i = 0; i < channels.length; i++) {
+          const channel = channels[i];
           if (!channel.isMember(topic, event, payload, join_ref)) {
             continue;
           }
           channel.trigger(event, payload, ref, join_ref);
         }
         this.triggerStateCallbacks("message", msg);
+        const ping = ref && connection.pings.get(ref);
+        if (ping) {
+          connection.pings.delete(ref);
+          ping();
+        }
       });
     }
     /**

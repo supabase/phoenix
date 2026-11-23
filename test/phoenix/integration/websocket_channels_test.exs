@@ -197,6 +197,20 @@ defmodule Phoenix.Integration.WebSocketChannelsTest do
         timeout: 200
       ]
 
+    socket "/ws/endpoint_limited", UserSocket,
+      websocket: [
+        check_origin: ["//example.com"],
+        timeout: 200
+      ],
+      max_channels_per_transport: 1
+
+    socket "/ws/endpoint_override", LimitedUserSocket,
+      websocket: [
+        check_origin: ["//example.com"],
+        timeout: 200
+      ],
+      max_channels_per_transport: 2
+
     socket "/ws/connect_info", UserSocketConnectInfo,
       websocket: [
         check_origin: ["//example.com"],
@@ -394,6 +408,68 @@ defmodule Phoenix.Integration.WebSocketChannelsTest do
             },
             ref: "2",
             topic: "room:limited-2"
+          }
+        end
+
+        test "honors max_channels_per_transport given to socket/3" do
+          {:ok, sock} =
+            WebsocketClient.connect(
+              self(),
+              "ws://127.0.0.1:#{@port}/ws/endpoint_limited/websocket?vsn=#{@vsn}",
+              @serializer
+            )
+
+          WebsocketClient.join(sock, "room:limited-1", %{})
+
+          assert_receive %Message{
+            event: "phx_reply",
+            payload: %{"response" => %{}, "status" => "ok"},
+            ref: "1",
+            topic: "room:limited-1"
+          }
+
+          WebsocketClient.join(sock, "room:limited-2", %{})
+
+          assert_receive %Message{
+            event: "phx_reply",
+            payload: %{
+              "response" => %{"reason" => "too many channels joined"},
+              "status" => "error"
+            },
+            ref: "2",
+            topic: "room:limited-2"
+          }
+        end
+
+        test "max_channels_per_transport given to socket/3 overrides the use Phoenix.Socket value" do
+          {:ok, sock} =
+            WebsocketClient.connect(
+              self(),
+              "ws://127.0.0.1:#{@port}/ws/endpoint_override/websocket?vsn=#{@vsn}",
+              @serializer
+            )
+
+          for index <- 1..2 do
+            topic = "room:limited-#{index}"
+            WebsocketClient.join(sock, topic, %{})
+
+            assert_receive %Message{
+              event: "phx_reply",
+              payload: %{"response" => %{}, "status" => "ok"},
+              topic: ^topic
+            }
+          end
+
+          WebsocketClient.join(sock, "room:limited-3", %{})
+
+          assert_receive %Message{
+            event: "phx_reply",
+            payload: %{
+              "response" => %{"reason" => "too many channels joined"},
+              "status" => "error"
+            },
+            ref: "3",
+            topic: "room:limited-3"
           }
         end
 
@@ -684,7 +760,12 @@ defmodule Phoenix.Integration.WebSocketChannelsTest do
 
           capture_log(fn ->
             WebsocketClient.send_event(sock, lobby, "boom", %{})
-            assert_receive %Message{event: "phx_error", payload: %{}, topic: ^lobby}
+
+            assert_receive %Message{
+              event: "phx_error",
+              payload: %{"reason" => "channel_crash"},
+              topic: ^lobby
+            }
           end)
         end
 
@@ -787,11 +868,19 @@ defmodule Phoenix.Integration.WebSocketChannelsTest do
 
           assert_receive {:DOWN, _, :process, ^sock, :normal}
           assert_receive {:DOWN, _, :process, ^chan1, shutdown}
-          # :shutdown for cowboy, {:shutdown, :closed} for cowboy 2, {:shutdown, :disconnected}
-          # for bandit
-          assert shutdown in [:shutdown, {:shutdown, :closed}, {:shutdown, :disconnected}]
+          # :shutdown for cowboy, {:shutdown, :closed} for cowboy 2. Bandit closes normally and
+          # waits for the client, so it is {:shutdown, :local_closed} or {:shutdown, :peer_closed}
+          # depending on whether it sees the client's close frame or the closed connection first
+          shutdowns = [
+            :shutdown,
+            {:shutdown, :closed},
+            {:shutdown, :local_closed},
+            {:shutdown, :peer_closed}
+          ]
+
+          assert shutdown in shutdowns
           assert_receive {:DOWN, _, :process, ^chan2, shutdown}
-          assert shutdown in [:shutdown, {:shutdown, :closed}, {:shutdown, :disconnected}]
+          assert shutdown in shutdowns
         end
 
         test "duplicate join event closes existing channel" do
@@ -955,6 +1044,37 @@ defmodule Phoenix.Integration.WebSocketChannelsTest do
           join_ref: @join_ref,
           payload: {:binary, <<0, 1>>}
         }
+      end
+
+      test "binary broadcasts stop V1 subscriber channels" do
+        topic = "room:bin_v1"
+
+        {:ok, socket} =
+          WebsocketClient.connect(
+            self(),
+            "ws://127.0.0.1:#{@port}/ws/websocket?vsn=1.0.0",
+            V1.JSONSerializer
+          )
+
+        WebsocketClient.join(socket, topic, %{})
+        assert_receive %Message{event: "phx_reply", payload: %{"status" => "ok"}, topic: ^topic}
+
+        log =
+          capture_log(fn ->
+            assert :ok = Endpoint.broadcast(topic, "binary_event", {:binary, <<1, 2, 3>>})
+            assert_receive %Message{event: "phx_error", topic: ^topic}
+          end)
+
+        assert log =~ "Stopping channels on topic #{inspect(topic)}"
+        assert log =~ "unable to send a binary payload on topic #{inspect(topic)}"
+        # the channel stops with a shutdown reason, so there is no crash report
+        refute log =~ "terminating"
+
+        # the socket stays connected, so the client can rejoin
+        WebsocketClient.join(socket, topic, %{})
+        assert_receive %Message{event: "phx_reply", payload: %{"status" => "ok"}, topic: ^topic}
+        assert :ok = Endpoint.broadcast(topic, "json_event", %{"a" => 1})
+        assert_receive %Message{event: "json_event", payload: %{"a" => 1}, topic: ^topic}
       end
     end
   end

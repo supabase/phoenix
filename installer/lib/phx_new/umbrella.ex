@@ -4,8 +4,8 @@ defmodule Phx.New.Umbrella do
   alias Phx.New.{Ecto, Web, Project, Mailer}
 
   template(:new, [
+    {:text, :project, "phx_common/gitignore": ".gitignore"},
     {:eex, :project,
-     "phx_umbrella/gitignore.eex": ".gitignore",
      "phx_umbrella/config/config.exs.eex": "config/config.exs",
      "phx_umbrella/config/dev.exs.eex": "config/dev.exs",
      "phx_umbrella/config/test.exs.eex": "config/test.exs",
@@ -21,7 +21,7 @@ defmodule Phx.New.Umbrella do
     project
     |> put_app()
     |> put_web()
-    |> put_root_app()
+    |> put_root_mod()
   end
 
   defp put_app(project) do
@@ -45,11 +45,10 @@ defmodule Phx.New.Umbrella do
     }
   end
 
-  defp put_root_app(%Project{app: app} = project) do
+  defp put_root_mod(%Project{} = project) do
     %{
       project
-      | root_app: :"#{app}_umbrella",
-        root_mod: Module.concat(project.app_mod, "Umbrella")
+      | root_mod: Module.concat(project.app_mod, "Umbrella")
     }
   end
 

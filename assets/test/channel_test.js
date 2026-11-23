@@ -151,7 +151,7 @@ describe("with transport", function (){
         payload: {one: "two"},
         ref: defaultRef,
         join_ref: channel.joinRef(),
-      })
+      }, channel)
     })
 
     it("can set timeout on joinPush", function (){
@@ -677,9 +677,10 @@ describe("with transport", function (){
       expect(channel.state).toBe("joined")
       expect(spy).toHaveBeenCalledTimes(0)
 
-      channel.trigger("phx_error")
+      channel.trigger("phx_error", {reason: "channel_crash"})
 
       expect(spy).toHaveBeenCalledTimes(1)
+      expect(spy).toHaveBeenCalledWith({reason: "channel_crash"})
     })
   })
 
@@ -991,31 +992,31 @@ describe("with transport", function (){
       channel.join().trigger("ok", {})
       channel.push("event", {foo: "bar"})
 
-      expect(socketSpy).toHaveBeenCalledWith(pushParams(channel))
+      expect(socketSpy).toHaveBeenCalledWith(pushParams(channel), channel)
     })
 
     it("enqueues push event to be sent once join has succeeded", function (){
       joinPush = channel.join()
       channel.push("event", {foo: "bar"})
 
-      expect(socketSpy).not.toHaveBeenCalledWith(pushParams(channel))
+      expect(socketSpy).not.toHaveBeenCalledWith(pushParams(channel), channel)
 
       jest.advanceTimersByTime(channel.timeout / 2)
       joinPush.trigger("ok", {})
 
-      expect(socketSpy).toHaveBeenCalledWith(pushParams(channel))
+      expect(socketSpy).toHaveBeenCalledWith(pushParams(channel), channel)
     })
 
     it("does not push if channel join times out", function (){
       joinPush = channel.join()
       channel.push("event", {foo: "bar"})
 
-      expect(socketSpy).not.toHaveBeenCalledWith(pushParams(channel))
+      expect(socketSpy).not.toHaveBeenCalledWith(pushParams(channel), channel)
 
       jest.advanceTimersByTime(channel.timeout * 2)
       joinPush.trigger("ok", {})
 
-      expect(socketSpy).not.toHaveBeenCalledWith(pushParams(channel))
+      expect(socketSpy).not.toHaveBeenCalledWith(pushParams(channel), channel)
     })
 
     it("uses channel timeout by default", function (){
@@ -1066,6 +1067,21 @@ describe("with transport", function (){
         /^tried to push.*before joining/,
       )
     })
+
+    it("does not leak the reply binding of a buffered push", function (){
+      socket.makeRef.mockRestore()
+      const replyBindings = () => channel.bindings.filter(b => b.event.startsWith("chan_reply_"))
+
+      joinPush = channel.join()
+      const pushes = [1, 2, 3].map(i => channel.push("event", {i}))
+      joinPush.trigger("ok", {})
+
+      expect(replyBindings().length).toBe(pushes.length)
+
+      pushes.forEach(push => push.trigger("ok", {}))
+
+      expect(replyBindings()).toEqual([])
+    })
   })
 
   describe("leave", function (){
@@ -1098,7 +1114,7 @@ describe("with transport", function (){
         payload: {},
         ref: defaultRef,
         join_ref: joinRef,
-      })
+      }, channel)
     })
 
     it("closes channel on 'ok' from server", function (){

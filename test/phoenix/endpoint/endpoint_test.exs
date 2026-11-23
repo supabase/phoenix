@@ -42,6 +42,15 @@ defmodule Phoenix.Endpoint.EndpointTest do
     use Phoenix.Endpoint, otp_app: :phoenix
   end
 
+  defmodule TaggingSender do
+    @behaviour Phoenix.PubSub.Sender
+
+    def send(pid, tag, message, state) do
+      Kernel.send(pid, {tag, message})
+      state
+    end
+  end
+
   setup_all do
     ExUnit.CaptureLog.capture_log(fn -> start_supervised!(Endpoint) end)
     start_supervised!({Phoenix.PubSub, name: :endpoint_pub})
@@ -307,6 +316,37 @@ defmodule Phoenix.Endpoint.EndpointTest do
     }
   end
 
+  test "pubsub broadcasts are delivered through the subscription sender" do
+    Endpoint.subscribe("sendertopic", sender: {TaggingSender, :tagged})
+    some = spawn(fn -> :ok end)
+
+    Endpoint.broadcast("sendertopic", "event1", %{key: :val})
+    assert_receive {:tagged, %Phoenix.Socket.Broadcast{event: "event1", topic: "sendertopic"}}
+
+    Endpoint.broadcast_from!(some, "sendertopic", "event2", %{key: :val})
+    assert_receive {:tagged, %Phoenix.Socket.Broadcast{event: "event2", topic: "sendertopic"}}
+
+    Endpoint.local_broadcast("sendertopic", "event3", %{key: :val})
+    assert_receive {:tagged, %Phoenix.Socket.Broadcast{event: "event3", topic: "sendertopic"}}
+
+    refute_received %Phoenix.Socket.Broadcast{}
+  end
+
+  test "pubsub uses the application environment when the endpoint is not started" do
+    defmodule PubSubEnvEndpoint do
+      use Phoenix.Endpoint, otp_app: :phoenix
+    end
+
+    Application.put_env(:phoenix, PubSubEnvEndpoint, pubsub_server: :endpoint_pub)
+    PubSubEnvEndpoint.subscribe("envtopic")
+    PubSubEnvEndpoint.broadcast("envtopic", "event1", %{key: :val})
+    assert_receive %Phoenix.Socket.Broadcast{event: "event1", topic: "envtopic"}
+  after
+    Application.delete_env(:phoenix, __MODULE__.PubSubEnvEndpoint)
+    :code.purge(__MODULE__.PubSubEnvEndpoint)
+    :code.delete(__MODULE__.PubSubEnvEndpoint)
+  end
+
   test "loads cache manifest from specified application" do
     config =
       put_in(
@@ -356,6 +396,19 @@ defmodule Phoenix.Endpoint.EndpointTest do
     assert_raise ArgumentError, ~r/expected a path starting with a single/, fn ->
       Endpoint.static_path("//invalid_path")
     end
+
+    # characters a browser's URL parser strips, turning the path scheme-relative
+    for unsafe <- [
+          "/\t/example.com",
+          "/%09/example.com",
+          "/\n/example.com",
+          "/\r/example.com",
+          "/\n\t/example.com"
+        ] do
+      assert_raise ArgumentError, ~r/unsafe characters/, fn ->
+        Endpoint.static_path(unsafe)
+      end
+    end
   end
 
   test "static_integrity/1 validates paths are local/safe" do
@@ -368,6 +421,19 @@ defmodule Phoenix.Endpoint.EndpointTest do
 
     assert_raise ArgumentError, ~r/expected a path starting with a single/, fn ->
       Endpoint.static_integrity("//invalid_path")
+    end
+
+    # characters a browser's URL parser strips, turning the path scheme-relative
+    for unsafe <- [
+          "/\t/example.com",
+          "/%09/example.com",
+          "/\n/example.com",
+          "/\r/example.com",
+          "/\n\t/example.com"
+        ] do
+      assert_raise ArgumentError, ~r/unsafe characters/, fn ->
+        Endpoint.static_integrity(unsafe)
+      end
     end
   end
 
@@ -385,6 +451,22 @@ defmodule Phoenix.Endpoint.EndpointTest do
         use Phoenix.Endpoint, otp_app: :phoenix
 
         socket "/ws", UserSocket, longpoll: [path: "/ws", check_origin: false, drainer: []]
+      end
+    end
+
+    assert_raise ArgumentError, ~r/:max_channels_per_transport must be a positive integer/, fn ->
+      defmodule MyInvalidSocketEndpoint3 do
+        use Phoenix.Endpoint, otp_app: :phoenix
+
+        socket "/ws", UserSocket, max_channels_per_transport: nil
+      end
+    end
+
+    assert_raise ArgumentError, ~r/:max_channels_per_transport must be a positive integer/, fn ->
+      defmodule MyInvalidSocketEndpoint4 do
+        use Phoenix.Endpoint, otp_app: :phoenix
+
+        socket "/ws", UserSocket, longpoll: true, max_channels_per_transport: 0
       end
     end
   end

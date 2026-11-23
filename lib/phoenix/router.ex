@@ -397,7 +397,7 @@ defmodule Phoenix.Router do
         pipeline,
         _
       ) do
-    conn = prepare.(conn, metadata)
+    conn = Phoenix.Router.Route.prepare(conn, metadata, prepare)
 
     case pipes do
       :current -> pipeline.(conn)
@@ -406,11 +406,11 @@ defmodule Phoenix.Router do
   end
 
   def __call__(%{private: %{phoenix_bypass: :all}} = conn, metadata, prepare, _, _) do
-    prepare.(conn, metadata)
+    Phoenix.Router.Route.prepare(conn, metadata, prepare)
   end
 
   def __call__(conn, metadata, prepare, pipeline, {plug, opts}) do
-    conn = prepare.(conn, metadata)
+    conn = Phoenix.Router.Route.prepare(conn, metadata, prepare)
     start = System.monotonic_time()
     measurements = %{system_time: System.system_time()}
     metadata = %{metadata | conn: conn}
@@ -762,10 +762,8 @@ defmodule Phoenix.Router do
 
         quote line: route.line do
           unquote(kind)(unquote(name)(unquote_splicing(args))) do
-            {unquote(build_metadata(route, path_params)),
-             fn var!(conn, :conn), %{path_params: var!(path_params, :conn)} ->
-               unquote(prepare)
-             end, &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}
+            {unquote(build_metadata(route, path_params)), unquote(prepare),
+             &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}
           end
         end
       end
@@ -816,7 +814,14 @@ defmodule Phoenix.Router do
   end
 
   defp build_pipes(name, pipe_through) do
-    plugs = pipe_through |> Enum.reverse() |> Enum.map(&{&1, [], true})
+    plugs =
+      pipe_through
+      |> Enum.reverse()
+      |> Enum.map(fn
+        {plug, opts} -> {plug, opts, true}
+        plug -> {plug, [], true}
+      end)
+
     opts = [init_mode: Phoenix.plug_init_mode(), log_on_halt: :debug]
     {conn, body} = Plug.Builder.compile(__ENV__, plugs, opts)
 
@@ -1028,13 +1033,26 @@ defmodule Phoenix.Router do
   @doc """
   Defines a list of plugs (and pipelines) to send the connection through.
 
-  Plugs are specified using the atom name of any imported 2-arity function
-  which takes a `Plug.Conn` and options and returns a `Plug.Conn`. For
-  example, `:require_authenticated_user`.
+  Function plugs are specified using the atom name of functions. For example,
+  `:require_authenticated_user`.
+
+  Module plugs are specified using the module name. For example,
+  `MyAppWeb.UserAuth`.
+
+  And, the plugs can also be given options via `{plug, opts}`. For example,
+  `{:require_authenticated_user, opts}`, or `{MyAppWeb.UserAuth, opts}`
 
   Pipelines are defined in the router, see `pipeline/2` for more information.
 
-      pipe_through [:require_authenticated_user, :my_browser_pipeline]
+  ## Examples
+
+      pipe_through [
+        :browser,
+        :require_authenticated_user,
+        {:trace_user, prefix: :authenticated},
+        MyAppWeb.Plugs.Locale,
+        {MyAppWeb.Plugs.Feature, flag: :beta}
+      ]
 
   ## Multiple invocations
 
@@ -1360,7 +1378,7 @@ defmodule Phoenix.Router do
 
   A common use case for `forward` is for sharing a router between
   applications or even breaking a big router into smaller ones.
-  However, in other for route generation to route accordingly, you
+  However, in order for route generation to route accordingly, you
   can only forward to a given `Phoenix.Router` once.
 
   The router pipelines will be invoked prior to forwarding the

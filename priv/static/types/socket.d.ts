@@ -23,12 +23,14 @@ export default class Socket {
     ref: number;
     /** @type{?string} */
     fallbackRef: string | null;
+    /** @type{?string} */
+    fallbackErrorRef: string | null;
+    /** @type{(() => void) | null} */
+    fallbackHealthCheck: (() => void) | null;
     /** @type{number} */
     timeout: number;
     /** @type{SocketTransport} */
     transport: SocketTransport;
-    /** @type{InstanceType<SocketTransport> | undefined | null} */
-    conn: InstanceType<SocketTransport> | undefined | null;
     /** @type{boolean} */
     primaryPassedHealthCheck: boolean;
     /** @type{number | undefined} */
@@ -45,14 +47,14 @@ export default class Socket {
     defaultDecoder: Decode<void>;
     /** @type{boolean} */
     closeWasClean: boolean;
-    /** @type{boolean} */
-    disconnecting: boolean;
     /** @type{BinaryType} */
     binaryType: BinaryType;
+    /** @type{Connection | null} */
+    connection: Connection | null;
     /** @type{number} */
     connectClock: number;
-    /** @type{boolean} */
-    pageHidden: boolean;
+    /** @type{Connection | null} */
+    visibilityConnection: Connection | null;
     /** @type{Encode<void>} */
     encode: Encode<void>;
     /** @type{Decode<void>} */
@@ -67,6 +69,8 @@ export default class Socket {
     rejoinAfterMs: (tries: number) => number;
     /** @type{(tries: number) => number} */
     reconnectAfterMs: (tries: number) => number;
+    /** @type{boolean} */
+    reconnectWhenHidden: boolean;
     /** @type{((kind: string, msg: string, data: any) => void) | null} */
     logger: ((kind: string, msg: string, data: any) => void) | null;
     /** @type{number} */
@@ -90,6 +94,19 @@ export default class Socket {
     /** @type{(() => string) | undefined} */
     authToken: (() => string) | undefined;
     /**
+     * The transport instance of the current connection, for example a WebSocket
+     * @type{InstanceType<SocketTransport> | null}
+     */
+    get conn(): InstanceType<SocketTransport> | null;
+    /**
+     * @internal
+     */
+    get pageHidden(): boolean;
+    /**
+     * @internal
+     */
+    handleVisibilityChange(): void;
+    /**
      * Returns the LongPoll transport reference
      */
     getLongPollTransport(): typeof LongPoll;
@@ -99,7 +116,7 @@ export default class Socket {
      * @param {SocketTransport} newTransport - The new transport class to instantiate
      *
      */
-    replaceTransport(newTransport: SocketTransport): void;
+    replaceTransport(newTransport: SocketTransport): number;
     /**
      * Returns the socket protocol
      *
@@ -195,6 +212,12 @@ export default class Socket {
     getSession(key: any): string | null;
     storeSession(key: any, val: any): void;
     connectWithFallback(fallbackTransport: any, fallbackThreshold?: number): void;
+    /**
+     * @private
+     *
+     * Stops the fallback of the current connection attempt, see connectWithFallback
+     */
+    private cancelFallback;
     clearHeartbeats(): void;
     onConnOpen(): void;
     /**
@@ -202,6 +225,20 @@ export default class Socket {
      */
     private heartbeatTimeout;
     resetHeartbeat(): void;
+    /**
+     * @private
+     *
+     * Tears down the current connection to reconnect afterwards, unless the socket was
+     * disconnected or connected again in the meantime, which takes precedence.
+     */
+    private teardownAndReconnect;
+    /**
+     * @private
+     *
+     * Whether the socket still uses the connection and did not give up on it. User callbacks
+     * can disconnect or connect, so code continuing after them checks this first.
+     */
+    private stillUses;
     teardown(callback: any, code: any, reason: any): any;
     waitForBufferDone(conn: any, callback: any, tries?: number): void;
     waitForSocketClosed(conn: any, callback: any, tries?: number): void;
@@ -216,7 +253,15 @@ export default class Socket {
     private onConnError;
     /**
      * @private
-     * @param {unknown} [reason] underlying close/error event forwarded to channel error listeners
+     *
+     * Errors the channels, as they need to rejoin once the given connection stopped being open.
+     *
+     * Channel error listeners receive `{source: "transport", reason}`, plus `event` with the
+     * underlying close/error event when there is one.
+     *
+     * @param {string} reason
+     * @param {Connection | null} [connection]
+     * @param {unknown} [event] underlying close/error event forwarded to channel error listeners
      */
     private triggerChanError;
     /**
@@ -249,8 +294,19 @@ export default class Socket {
     channel(topic: string, chanParams?: Params | (() => Params)): Channel;
     /**
      * @param {Message<Record<string, any>>} data
+     * @param {Channel} [channel] - The channel the push belongs to, if any
      */
-    push(data: Message<Record<string, any>>): void;
+    push(data: Message<Record<string, any>>, channel?: Channel): void;
+    /**
+     * @private
+     */
+    private send;
+    /**
+     * @private
+     *
+     * Whether the push was made for an earlier join of its channel, or the channel left since.
+     */
+    private isOutdated;
     /**
      * Return the next message ref, accounting for overflows
      * @returns {string}
@@ -277,6 +333,7 @@ import Channel from "./channel";
 import type { SocketTransport } from "./types";
 import type { Encode } from "./types";
 import type { Decode } from "./types";
+import Connection from "./connection";
 import type { HeartbeatCallback } from "./types";
 import type { Params } from "./types";
 import type { Vsn } from "./types";
